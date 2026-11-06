@@ -196,7 +196,7 @@
     o.root.classList.remove('is-open');
     document.documentElement.classList.remove('sheet-lock');
     setTimeout(function () { o.root.remove(); if (o.url) URL.revokeObjectURL(o.url); }, 220);
-    if (o.opener && o.opener.focus) o.opener.focus();
+    if (o.opener && o.opener.focus) o.opener.focus({ preventScroll: true });
   }
   function shareSheet(opts) {
     close();

@@ -669,10 +669,10 @@
   var sx = 0, sy = 0, swiping = false, lock = null;
   function swipeOK(t) { return !(t.closest && t.closest('.hc-board, .table-wrap, .ticker, .gamestrip, .sheet-root, input, textarea, select, button, [data-no-swipe], .balls.roll')); }
   document.addEventListener('pointerdown', function (e) { if (e.pointerType === 'mouse' || !swipeOK(e.target)) { swiping = false; return; } sx = e.clientX; sy = e.clientY; swiping = true; lock = null; }, { passive: true });
-  document.addEventListener('pointermove', function (e) { if (!swiping || lock) return; var dx = e.clientX - sx, dy = e.clientY - sy; if (Math.abs(dx) > 10 || Math.abs(dy) > 10) lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y'; }, { passive: true });
+  document.addEventListener('pointermove', function (e) { if (!swiping || lock) return; var dx = e.clientX - sx, dy = e.clientY - sy; if (Math.abs(dx) > 10 || Math.abs(dy) > 10) lock = Math.abs(dx) > Math.abs(dy) * 2 ? 'x' : 'y'; }, { passive: true });
   document.addEventListener('pointerup', function (e) {
     if (!swiping) return; swiping = false;
-    var dx = e.clientX - sx; if (lock !== 'x' || Math.abs(dx) < 70) return;
+    var dx = e.clientX - sx; if (lock !== 'x' || Math.abs(dx) < 80 || Math.abs(e.clientY - sy) * 2 > Math.abs(dx)) return;
     var strip = document.querySelector('.gamestrip-inner'); if (!strip) return;
     var tabs = [].slice.call(strip.querySelectorAll('a')), cur = tabs.findIndex(function (t) { return t.classList.contains('on'); });
     if (cur < 0) return;
@@ -712,7 +712,9 @@
       if (!ind) { ind = document.createElement('span'); ind.className = 'gs-ind'; ind.setAttribute('aria-hidden', 'true'); strip.appendChild(ind); strip.classList.add('has-ind'); }
       if (active) {
         ind.style.left = active.offsetLeft + 10 + 'px'; ind.style.width = Math.max(0, active.offsetWidth - 20) + 'px'; ind.style.opacity = '1';
-        if (active.scrollIntoView) try { active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduce() ? 'auto' : 'smooth' }); } catch (e) {}
+        // Horizontal only. scrollIntoView also moves the page, which pulled readers back up to this strip.
+        var left = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+        if (strip.scrollTo) try { strip.scrollTo({ left: left, behavior: reduce() ? 'auto' : 'smooth' }); } catch (e) { strip.scrollLeft = left; }
       } else ind.style.opacity = '0';
     }
   }
@@ -789,7 +791,9 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { if (!window.__lphBoundOnce) bind(); });
   else if (!window.__lphBoundOnce) bind();
   document.addEventListener('astro:page-load', function () { window.__lphBoundOnce = true; }, { once: true });
-  window.addEventListener('resize', function () { syncNav(); });
+  // Phones fire resize when the address bar slides away during a scroll; only a width change affects the strip.
+  var navWidth = window.innerWidth;
+  window.addEventListener('resize', function () { if (window.innerWidth === navWidth) return; navWidth = window.innerWidth; syncNav(); });
   // QA hook: window.__lph.ingest({ updated_at_pht, draws: [...] }) simulates a live.json update.
   window.__lph = { ingest: ingest, state: function (slug, ms) { return gameState(BY[slug], ms || Date.now()); }, toast: showToast };
 })();
