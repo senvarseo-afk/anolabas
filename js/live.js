@@ -154,16 +154,50 @@
     });
   }
 
+  /* Game pages: say plainly when the card below is not the draw the reader may be waiting for. */
+  function renderDrawNotes(now) {
+    [].forEach.call(document.querySelectorAll('[data-drawnote]'), function (el) {
+      var g = BY[el.getAttribute('data-drawnote')], only = el.getAttribute('data-note-slot') || undefined;
+      var card = document.querySelector('article.card[data-game="' + el.getAttribute('data-drawnote') + '"]'), s = g && gameState(g, now, only), text = '';
+      if (s && card) {
+        var today = iso(mnl(now)), date = card.getAttribute('data-date'), slot = card.getAttribute('data-slot');
+        var below = 'Below is the ' + (date === today ? SLOT_LABEL[slot] : fmtDateRow(date) + ' ' + SLOT_LABEL[slot]) + ' result.';
+        var shown = date === s.date && slot === s.slot;
+        if (s.kind === 'wait' && !shown) text = SLOT_LABEL[s.slot] + ' drawn. Waiting for the official result. ' + below;
+        else if (s.kind === 'live' && !shown) text = 'Today ' + SLOT_LABEL[s.slot] + ' is being drawn. ' + below;
+        else if (s.kind === 'next' && s.date === today && !shown) text = 'Today ' + SLOT_LABEL[s.slot] + ' is not drawn yet. ' + below;
+      }
+      setText(el, text); el.hidden = !text;
+    });
+  }
+  /* Right after a draw, everything from that draw time goes in the home hero. Other hours keep the normal hero. */
+  function setHomeJust(on, date, slot) {
+    var head = document.querySelector('.home-board'); if (!head) return;
+    head.classList.toggle('hb-just', on);
+    [].forEach.call(document.querySelectorAll('[data-hero-extra]'), function (el) { el.hidden = !(on && el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
+    // A Swertres or EZ2 result still on its way must not sit under "Just drawn" with an older draw.
+    [].forEach.call(document.querySelectorAll('[data-hero-game]'), function (el) { el.hidden = on && !(el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
+    [].forEach.call(document.querySelectorAll('.hboard .brow'), function (el) { el.hidden = !!(on && el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
+    var h = document.querySelector('[data-home-h]'); if (h) setText(h, on ? 'Other games' : 'Latest results');
+    var btn = document.querySelector('[data-home-check]');
+    if (btn) {
+      btn.classList.toggle('is-just', on); setText(btn, on ? 'Check this draw' : 'Check my ticket');
+      var cta = btn.parentNode, bar = document.querySelector('.drawbar');
+      if (bar && cta.parentNode === bar.parentNode && (on !== (cta.nextElementSibling === bar))) cta.parentNode.insertBefore(on ? cta : bar, on ? bar : cta);
+    }
+  }
   /* The home label is built at deploy time; say what the newest draw is relative to right now. */
   function renderHomeClock(now) {
     var lb = document.querySelector('[data-hb-label]'); if (!lb) return;
     var date = lb.getAttribute('data-date'), slot = lb.getAttribute('data-slot'); if (!date || !slot) return;
     var d = mnl(now), today = iso(d), yest = iso(addDays(d, -1)), full = fmtDateRow(date) + ', ' + SLOT_LABEL[slot], text;
+    var just = !noDrawOn(d) && date === today && now - startMs(date, slot) < 2 * 3600e3;
     if (noDrawOn(d)) text = 'Last draw · ' + full;
-    else if (date === today) text = (now - startMs(date, slot) < 2 * 3600e3 ? 'Just drawn · Today ' : 'Resulta ngayon · ') + SLOT_LABEL[slot];
+    else if (date === today) text = just ? 'Just drawn · ' + fmtDateRow(date) + ' · ' + SLOT_LABEL[slot] : 'Resulta ngayon · ' + SLOT_LABEL[slot];
     else if (date === yest && slot === '9PM') text = 'Resulta kagabi · ' + fmtDateRow(date);
     else text = 'Latest draw · ' + full;
     setText(lb, text);
+    setHomeJust(just, date, slot);
   }
 
   /* ---------- tick loop ---------- */
@@ -175,6 +209,7 @@
     statusEls.forEach(function (el) { renderStatus(el, now); });
     renderTimeline(now);
     renderHomeClock(now);
+    renderDrawNotes(now);
     if (!statusEls.length && !timeline) return;
     var fast = statusEls.some(function (el) { var c = el.querySelector('.st-cd'); return c && /^\d+:\d\d$/.test(c.textContent); });
     timer = setTimeout(tick, fast ? 1000 - (now % 1000) + 5 : 20000);
@@ -205,10 +240,13 @@
 
   function sigOf(d) { return [d.numbers.join('-'), d.status, d.jackpot, d.winners].join('|'); }
   var applied = {}; // draws newer than the built pages: a client-side navigation brings back built HTML, so bind() replays them
+  var replaying = false; // a replay restores what the reader already saw, so it must not roll or count as new
   function replayApplied() {
+    replaying = true;
     Object.keys(applied).map(function (k) { return applied[k]; })
       .sort(function (a, b) { return a.date === b.date ? ORDER[a.slot] - ORDER[b.slot] : (a.date < b.date ? -1 : 1); })
       .forEach(applyDraw);
+    replaying = false;
     toFlash = [];
   }
   function ingest(j) {
@@ -250,9 +288,28 @@
     toFlash.forEach(function (el) { el.classList.add('flash'); });
     toFlash = [];
   }
+  /* Balls roll in only the first time a reader sees a draw. No storage means no record, so nothing rolls. */
+  var SEEN_KEY = 'lph_seen_draws', SEEN_MAX = 200;
+  function seenList() { try { var v = JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return null; } }
+  function seenSave(list) { try { localStorage.setItem(SEEN_KEY, JSON.stringify(list.slice(-SEEN_MAX))); } catch (e) {} }
+  function rollFirstSeen() {
+    var els = document.querySelectorAll('.balls[data-roll]'), seen = els.length ? seenList() : null, added = false;
+    if (!seen) return;
+    [].forEach.call(els, function (el) {
+      var k = el.getAttribute('data-roll');
+      if (seen.indexOf(k) >= 0) return;
+      seen.push(k); added = true;
+      if (!reduce()) el.classList.add('roll');
+    });
+    if (added) seenSave(seen);
+  }
+  function markSeen(d) {
+    var k = d.game + '|' + d.date + '|' + d.slot, seen = seenList();
+    if (seen && seen.indexOf(k) < 0) { seen.push(k); seenSave(seen); }
+  }
   function ballsEl(g, nums, roll, size) {
     var wrap = document.createElement('div');
-    wrap.className = 'balls' + (size ? ' ' + size : '') + (roll && !reduce() ? ' roll' : '');
+    wrap.className = 'balls' + (size ? ' ' + size : '') + (roll && !reduce() && !replaying ? ' roll' : '');
     wrap.setAttribute('role', 'list');
     wrap.setAttribute('aria-label', g.name + ' winning numbers');
     nums.forEach(function (n) {
@@ -267,6 +324,7 @@
   }
   function applyDraw(d) {
     var g = BY[d.game];
+    if (!replaying) markSeen(d);
     var dot = document.querySelector('[data-strip="' + d.game + '"] .newdot'); if (dot) dot.hidden = false;
     var bn = document.querySelector('[data-bn="today"]'); if (bn) bn.classList.add('has-new');
     var card = document.querySelector('[data-card="' + d.game + '"]');
@@ -380,11 +438,27 @@
       return;
     }
     if (!also || !lb || d.date < lb.getAttribute('data-date')) return;
+    heroExtra(box, g, d);
     if (also.hidden || !also.textContent) { also.textContent = 'Also drawn at 9PM: '; also.hidden = false; }
     also.setAttribute('data-date', d.date);
     if ([].some.call(also.querySelectorAll('a'), function (a) { return a.textContent === g.short; })) return;
     if (also.querySelector('a')) also.appendChild(document.createTextNode(', '));
     var a = document.createElement('a'); a.href = '/lottoph/' + g.path + '/'; a.textContent = g.short; also.appendChild(a);
+  }
+  /* a six-number, 4D or 6D draw that arrives live joins the hero the same way a built one does */
+  function heroExtra(box, g, d) {
+    var el = box.querySelector('[data-hero-extra="' + d.game + '"]');
+    if (!el) {
+      el = document.createElement('div'); el.className = 'hb-game hb-extra'; el.setAttribute('data-hero-extra', d.game); el.hidden = true;
+      var name = document.createElement('div'); name.className = 'hb-name';
+      var a = document.createElement('a'); a.href = '/lottoph/' + g.path + '/'; a.textContent = g.short;
+      var slot = document.createElement('span'); slot.setAttribute('data-f', 'slot');
+      name.appendChild(a); name.appendChild(slot); el.appendChild(name); el.appendChild(ballsEl(g, [], false, 'sm')); box.appendChild(el);
+    }
+    setText(el.querySelector('[data-f="slot"]'), SLOT_LABEL[d.slot]);
+    el.replaceChild(ballsEl(g, d.numbers.map(function (n) { return padN(g, n); }), true, 'sm'), el.querySelector('.balls'));
+    el.setAttribute('data-date', d.date); el.setAttribute('data-slot', d.slot);
+    renderHomeClock(Date.now());
   }
   /* home: the jackpot list and the "biggest jackpot" head, recomputed from the list */
   function updateJackpots(g, d) {
@@ -439,6 +513,29 @@
       }
     }
   }
+  function checkedAt(ts, drawDate) {
+    if (!ts || ts.indexOf('T') < 0) return '';
+    var t = new Date(ts); if (isNaN(t.getTime())) return '';
+    var m = new Date(t.getTime() + 8 * 3600e3), h = m.getUTCHours(), day = m.toISOString().slice(0, 10);
+    return (day === drawDate ? '' : mdShort(day) + ', ') + (h % 12 || 12) + ':' + pad(m.getUTCMinutes()) + (h >= 12 ? ' PM' : ' AM') + ' PHT';
+  }
+  /* the line under a result card: same order and same omissions as DrawCard.astro */
+  function drawStat(g, d) {
+    var p = document.createElement('p'); p.className = 'drawstat';
+    var st = document.createElement('b'); st.textContent = d.status === 'official' ? 'Published' : 'Provisional'; p.appendChild(st);
+    var at = d.status === 'official' ? checkedAt(d.source_updated_at, d.date) : '';
+    if (at) p.appendChild(document.createTextNode(' · Checked ' + at));
+    if (d.jackpot != null) {
+      p.appendChild(document.createTextNode(' · ' + (daily(g) ? 'Prize' : prizeCap(g)) + ' '));
+      var v = document.createElement('span'); v.className = 'tabnum'; v.setAttribute('data-f', 'card-prize'); v.textContent = fmtPeso(d.jackpot); p.appendChild(v);
+    }
+    if (!daily(g) && d.winners != null) {
+      p.appendChild(document.createTextNode(' · '));
+      var w = document.createElement('span'); w.className = 'tabnum'; w.setAttribute('data-f', 'card-winners'); w.textContent = Number(d.winners).toLocaleString(); p.appendChild(w);
+      p.appendChild(document.createTextNode(' winner' + (d.winners === 1 ? '' : 's')));
+    }
+    return p;
+  }
   function updateHub(g, d) {
     var cards = document.querySelectorAll('article.card[data-game="' + d.game + '"]');
     if (!cards.length) return;
@@ -446,18 +543,14 @@
     if (d.date < shownDate) return;
     var art = document.createElement('article');
     art.className = 'card'; art.setAttribute('data-game', d.game); art.setAttribute('data-date', d.date); art.setAttribute('data-slot', d.slot);
+    art.setAttribute('data-st', d.status || 'official');
     var head = document.createElement('div'); head.className = 'card-head';
-    var l = document.createElement('span'); l.textContent = g.slots.length > 1 ? SLOT_LABEL[d.slot] : '9PM draw';
-    var b = document.createElement('span'); b.className = 'badge ' + (d.status === 'official' ? 'ok' : 'pending'); b.textContent = d.status === 'official' ? 'Verified vs PCSO' : 'Provisional';
-    head.appendChild(l); head.appendChild(b);
-    var meta = document.createElement('div'); meta.className = 'meta';
-    var stat = function (label, value) { var s = document.createElement('span'); s.appendChild(document.createTextNode(label + ': ')); var v = document.createElement('b'); v.className = 'tabnum'; v.textContent = value; s.appendChild(v); return s; };
-    meta.appendChild(stat(daily(g) ? 'Prize' : prizeCap(g), fmtPeso(d.jackpot)));
-    if (!daily(g)) meta.appendChild(stat('Winners', d.winners == null ? '—' : String(d.winners)));
+    var l = document.createElement('span'); l.textContent = fmtDateRow(d.date) + ' · ' + SLOT_LABEL[d.slot];
+    head.appendChild(l);
     var sh = document.createElement('button'); sh.type = 'button'; sh.className = 'sharebtn'; sh.setAttribute('data-share', ''); sh.setAttribute('aria-label', 'Share ' + g.name + ' ' + d.slot + ' result'); sh.textContent = 'Share';
-    meta.appendChild(sh);
+    head.appendChild(sh);
     var newBalls = ballsEl(g, d.numbers.map(function (n) { return padN(g, n); }), true, 'lg');
-    art.appendChild(head); art.appendChild(newBalls); art.appendChild(meta);
+    art.appendChild(head); art.appendChild(newBalls); art.appendChild(drawStat(g, d));
     var parent = first.parentNode;
     if (d.date > shownDate) {
       var oldBalls = first.querySelector('.balls'), scope = oldBalls && oldBalls.getAttribute('data-astro-transition-scope');
@@ -680,6 +773,8 @@
       poll();
     }
   }
+  rollFirstSeen();
+  document.addEventListener('astro:after-swap', rollFirstSeen);
   document.addEventListener('astro:page-load', bind);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { if (!window.__lphBoundOnce) bind(); });
   else if (!window.__lphBoundOnce) bind();

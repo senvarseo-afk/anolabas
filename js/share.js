@@ -108,8 +108,8 @@
     } else {
       var slot = card.getAttribute('data-slot'), d = card.getAttribute('data-date');
       rows.push({ label: slot === '2PM' ? '2PM' : slot === '5PM' ? '5PM' : '9PM', nums: balls(card) });
-      verified = !/provisional|archive/i.test((card.querySelector('.badge') || {}).textContent || '');
-      var mb = card.querySelectorAll('.meta b'); prize = mb[0] ? mb[0].textContent.trim() : ''; winners = mb[1] ? mb[1].textContent.trim() : '';
+      verified = card.getAttribute('data-st') === 'official';
+      var mp = card.querySelector('[data-f="card-prize"]'), mw = card.querySelector('[data-f="card-winners"]'); prize = mp ? mp.textContent.trim() : ''; winners = mw ? mw.textContent.trim() : '';
       date = longDate(d); url = SITE + '/' + g.path + '/' + d + '/';
     }
     return { g: g, rows: rows, date: date, prize: prize, winners: winners, url: url, verified: verified };
@@ -271,7 +271,24 @@
     void sheet.offsetHeight; root.classList.add('is-open');
     x.focus({ preventScroll: true });
   }
-  window.LPHShare = { open: shareSheet, close: close, info: infoSheet };
+  /* Empty drawer for a caller to fill (ticket check). Same shell, focus handling and close rules as the other sheets. */
+  function panelSheet(opts) {
+    close();
+    var root = document.createElement('div'); root.className = 'sheet-root';
+    var dim = document.createElement('div'); dim.className = 'sheet-dim'; dim.addEventListener('click', close);
+    var sheet = document.createElement('div'); sheet.className = 'sheet sheet-info sheet-panel'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', opts.label || 'Panel');
+    var grab = document.createElement('div'); grab.className = 'sheet-grab';
+    var body = document.createElement('div'); body.className = 'sheet-body';
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'btn sec sheet-close-btn'; x.textContent = 'Close'; x.addEventListener('click', close);
+    sheet.appendChild(grab); sheet.appendChild(body); sheet.appendChild(x);
+    root.appendChild(dim); root.appendChild(sheet); document.body.appendChild(root);
+    document.documentElement.classList.add('sheet-lock');
+    open = { root: root, opener: opts.opener, url: null };
+    void sheet.offsetHeight; root.classList.add('is-open');
+    x.focus({ preventScroll: true });
+    return { body: body, close: close };
+  }
+  window.LPHShare = { open: shareSheet, close: close, info: infoSheet, panel: panelSheet };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-sheet]'); if (!b) return;
     e.preventDefault(); infoSheet(b.getAttribute('data-sheet'), b);
