@@ -11,8 +11,10 @@
     });
   }
   function boot() {
-    if (ready) return ready;
-    var rules = window.LPH && window.LPH.checker ? Promise.resolve() : addScript('/lottoph/js/tools/common.js').then(function () { return addScript('/lottoph/js/tools/check-core.js'); });
+    // common.js resets window.LPH when another tool page runs, so the rules are checked on every open.
+    var rules = window.LPH && window.LPH.checker ? Promise.resolve()
+      : (window.LPH ? Promise.resolve() : addScript('/lottoph/js/tools/common.js')).then(function () { return addScript('/lottoph/js/tools/check-core.js'); });
+    if (ready) return rules.then(function () { return ready; });
     ready = rules.then(function () { return fetch('/lottoph/data/check-config.json'); })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) { j.games.forEach(function (g) { byId[g.slug] = g; }); claim = j.claim; })
@@ -110,6 +112,6 @@
     e.preventDefault(); e.stopPropagation();
     var panel = window.LPHShare.panel({ label: 'Check this draw', opener: a });
     panel.body.appendChild(el('p', 'small muted', 'Loading…'));
-    boot().then(function () { draw(panel.body, targets, targets[0]); }, function () { location.href = fullUrl(targets[0]); });
+    boot().then(function () { draw(panel.body, targets, targets[0]); }).catch(function () { location.href = fullUrl(targets[0]); });
   }, true);
 })();

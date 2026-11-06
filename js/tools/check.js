@@ -128,10 +128,11 @@
     elOut.innerHTML = ''; elWin.innerHTML = '<p class="status">Loading ' + L.esc(g.display) + ' draws…</p>';
     elGo.disabled = true;
     L.loadGame(slug).then(function (j) {
+      if (g.slug !== slug) return; // the reader already picked another game
       data = j; elGo.disabled = false; setStatus('');
       if (!j.dates.length) { setStatus('No draws recorded for this game yet.'); return; }
       fillDates();
-    }).catch(function () { setStatus('Could not load draw data. Check your connection and try again.'); elWin.innerHTML = ''; });
+    }).catch(function () { if (g.slug !== slug) return; setStatus('Could not load draw data. Check your connection and try again.'); elWin.innerHTML = ''; });
   }
 
   // URL params: ?game=slug&date=YYYY-MM-DD&slot=2PM&bet=rambolito|perm|roll1|roll4&n=1-2-3&n=4-5-6

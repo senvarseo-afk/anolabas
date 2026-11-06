@@ -106,6 +106,10 @@
           else body += 'This archive record has no pool or winner count. ';
           if (r.prize > 0) body += 'Other combinations on this play add ' + L.peso(r.prize) + ' in fixed prizes. ';
           body += 'Only PCSO validation gives the final amount. A prize above ₱10,000 is taxed 20% on the whole amount and is claimed at a PCSO office.</span>';
+        } else if (r.jackpot && d.winners == null) {
+          // A record without a winner count cannot say whether the jackpot was shared, so no personal amount or tax is shown.
+          cls = 'win'; win = true; r.unknownShare = true;
+          body = 'Matched ' + r.matched + ' of ' + total + ' — ' + r.tier + '.<span class="sub">PCSO listed a jackpot of ' + L.peso(r.prize) + ' for this draw. This record has no winner count, so we cannot tell if it was shared. Only PCSO validation gives your amount. Prizes above ₱10,000 are taxed 20% and the jackpot is claimed at the PCSO Main Office.</span>';
         } else if (r.prize === null) {
           cls = 'win'; win = true;
           body = 'Matched ' + r.matched + ' of ' + total + ' — ' + r.tier + '.<span class="sub">' + (r.pool
@@ -132,7 +136,7 @@
             : 'Matched ' + r.matched + ' of ' + total + ' — no prize' + (g.type === 'lotto' ? ' (3 or more needed)' : '') + '.';
         }
         if (r.note) body += '<span class="sub">' + r.note + '</span>';
-    return { cls: cls, win: win, body: body, summary: (r.first ? r.tier + ' (minimum ' + L.peso(r.firstMin) + ', share of the pool)' : r.prize === null ? r.tier + ' (share of the prize pool)' : r.prize > 0 ? r.tier + ' ' + L.peso(r.jackpot && d.winners > 1 ? r.prize / d.winners : r.prize) : 'no prize') };
+    return { cls: cls, win: win, body: body, summary: (r.unknownShare ? r.tier + ' (amount depends on PCSO validation)' : r.first ? r.tier + ' (minimum ' + L.peso(r.firstMin) + ', share of the pool)' : r.prize === null ? r.tier + ' (share of the prize pool)' : r.prize > 0 ? r.tier + ' ' + L.peso(r.jackpot && d.winners > 1 ? r.prize / d.winners : r.prize) : 'no prize') };
   }
   return { pool: pool, betOptions: betOptions, nInputs: nInputs, badCells: badCells, verdict: verdict };
   };
