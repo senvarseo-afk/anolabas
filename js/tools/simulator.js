@@ -7,7 +7,11 @@
   var data = null, mode = 'random', windowN = 100, lastSets = [], busy = false;
   var MODE_LABEL = { random: 'Random', hot: 'Hot (most drawn)', cold: 'Cold (least drawn)', 'longest-gap': 'Longest gap (descriptive)', personal: 'Personal numbers', dream: 'Dream keyword (folklore)', today: 'Daily set' };
 
-  function setStatus(t) { $('sim-status').textContent = t || ''; }
+  function setStatus(t) { var el = $('sim-status'); el.classList.remove('is-err'); el.textContent = t || ''; }
+  /* A blocked draw must read as one: red text, and the field that needs filling gets focus. */
+  function needInput(t, id) { setStatus(t); $('sim-status').classList.add('is-err'); var f = id && $(id); if (f && f.focus) try { f.focus({ preventScroll: true }); } catch (e) {} return null; }
+  /* The button says what it is doing, so a tap during the draw never looks ignored. */
+  function setDrawing(on) { var go = $('sim-go'); busy = on; go.disabled = on; go.textContent = on ? 'Drawing…' : 'Simulate'; }
   function allNums() { var a = []; for (var i = lo; i <= hi; i++) a.push(i); return a; }
 
   /* ---------- generators ---------- */
@@ -58,7 +62,7 @@
   }
   function genPersonal() {
     var bday = $('sim-bday').value, text = $('sim-plate').value;
-    if (!bday && !text.replace(/\D/g, '')) { setStatus('Enter a birthday or a plate/anniversary number first.'); return null; }
+    if (!bday && !text.replace(/\D/g, '')) { return needInput('Enter a birthday or a plate/anniversary number first.', 'sim-bday-m'); }
     var seeds = personalSeeds(bday, text);
     return isLotto ? fillUnique(seeds) : fillUnique(seeds.slice(0, N));
   }
@@ -69,20 +73,20 @@
   }
   function genDream() {
     var e = dreamMatch($('sim-dream-kw').value);
-    if (!e) { setStatus('No folklore entry for that word. Try one from the list (e.g. ahas, tubig, pera).'); return null; }
+    if (!e) { return needInput('No folklore entry for that word. Try one from the list (e.g. ahas, tubig, pera).', 'sim-dream-kw'); }
     var seeds = isLotto ? e.n.slice() : String(e.n.join('')).split('').map(Number);
     if (g.slug === '2d-lotto') seeds = e.n.slice();
     return fillUnique(seeds.map(fitRange));
   }
   function genToday() {
     var bday = $('sim-bday').value;
-    if (!bday) { setStatus('Enter your birthday to get your one set for today.'); return null; }
+    if (!bday) { return needInput('Enter your birthday to get your one set for today.', 'sim-bday-m'); }
     var rng = L.mulberry32(L.hashStr(bday + '|' + L.todayManila() + '|' + g.slug));
     return genRandom(rng);
   }
   function generateOne() {
     if (mode === 'random') return genRandom();
-    if (mode === 'hot' || mode === 'cold' || mode === 'longest-gap') { if (!data) { setStatus('Draw history is still loading…'); return null; } return genWeighted(mode); }
+    if (mode === 'hot' || mode === 'cold' || mode === 'longest-gap') { if (!data) return needInput('Draw history is still loading. Try again in a moment.'); return genWeighted(mode); }
     if (mode === 'personal') return genPersonal();
     if (mode === 'dream') return genDream();
     if (mode === 'today') return genToday();
@@ -150,7 +154,7 @@
       var row = box.querySelector('.balls') || box, rb = row.getBoundingClientRect().bottom, st = stage.getBoundingClientRect().top;
       var nav = document.querySelector('.bottomnav'), navH = nav ? nav.getBoundingClientRect().height : 0;
       var dy = Math.min(rb + 12 - (window.innerHeight - navH), st - 8);
-      if (dy > 0) { try { window.scrollBy({ top: dy, behavior: 'smooth' }); } catch (e) { window.scrollBy(0, dy); } }
+      if (dy > 0) { try { window.scrollBy({ top: dy, behavior: prefersReduced() ? 'auto' : 'smooth' }); } catch (e) { window.scrollBy(0, dy); } }
     } catch (e) {}
   }
   function revealSets(sets) {
@@ -159,13 +163,14 @@
     out.innerHTML = sets.map(function (s, i) { return setHTML(i, s); }).join('');
     if (!stage || prefersReduced()) { // checked at click time: no drum, results at once
       if (stage) stage.classList.remove('is-spin');
-      busy = false; go.disabled = false; out.removeAttribute('aria-busy');
+      setDrawing(false); out.removeAttribute('aria-busy');
       setStatus(doneText(sets.length));
+      keepInView(out, out.querySelector('.sim-set') || out);
       return;
     }
     var boxes = out.querySelectorAll('.sim-set'), first = boxes[0], firstBalls = first.querySelectorAll('.balls .ball'), tail = first.querySelectorAll('.pattern, .btn-row');
     var hadFocus = document.activeElement === go;
-    busy = true; go.disabled = true; out.setAttribute('aria-busy', 'true');
+    setDrawing(true); out.setAttribute('aria-busy', 'true');
     first.classList.add('tb-wait');
     each(tail, function (el) { el.classList.add('tb-hide'); });
     for (var i = 1; i < boxes.length; i++) boxes[i].classList.add('tb-hide');
@@ -190,7 +195,7 @@
       each(firstBalls, function (b) { b.style.animationDelay = ''; });
       each(out.querySelectorAll('.tb-show'), function (el) { el.classList.remove('tb-show'); });
       if (label) label.textContent = 'SIMULATION · Done';
-      busy = false; go.disabled = false; out.removeAttribute('aria-busy');
+      setDrawing(false); out.removeAttribute('aria-busy');
       if (hadFocus && (!document.activeElement || document.activeElement === document.body)) { try { go.focus({ preventScroll: true }); } catch (e) {} }
       setStatus(doneText(sets.length));
     }, end);
@@ -310,6 +315,7 @@
 
   /* ---------- boot ---------- */
   setMode('random');
+  $('sim-go').disabled = false; // built disabled, so it cannot be tapped before this script has hooked it up
   L.loadGame(g.slug).then(function (j) {
     data = j; updateWindowNote();
     var last = j.draws[0];
