@@ -82,7 +82,11 @@
     Object.keys(CFG.latest || {}).forEach(function (slug) {
       var l = CFG.latest[slug]; if (!l) return;
       if (!latestDate[slug] || l.date > latestDate[slug]) latestDate[slug] = l.date;
-      (l.slots || []).forEach(function (s) { received[slug + '|' + l.date + '|' + s] = official[slug + '|' + l.date + '|' + s] = true; });
+      (l.slots || []).forEach(function (s) {
+        var k = slug + '|' + l.date + '|' + s;
+        received[k] = official[k] = true;
+        if (l.sigs && l.sigs[s] && !sigs[k]) sigs[k] = l.sigs[s]; // what the page was built with, so a later PCSO correction is noticed
+      });
     });
   }
   seedLatest();
@@ -248,7 +252,7 @@
       .then(function () { clearTimeout(to); inFlight = false; schedulePoll(); });
   }
 
-  function sigOf(d) { return [d.numbers.join('-'), d.status, d.jackpot, d.winners].join('|'); }
+  function sigOf(d) { return [d.numbers.map(Number).join('-'), d.status, d.jackpot, d.winners].join('|'); }
   var applied = {}; // draws newer than the built pages: a client-side navigation brings back built HTML, so bind() replays them
   var replaying = false; // a replay restores what the reader already saw, so it must not roll or count as new
   function replayApplied() {
@@ -382,7 +386,7 @@
       setText(f('draws'), all.length + ' draw' + (all.length === 1 ? '' : 's'));
     } else {
       var oldB = ballsWrap && ballsWrap.querySelector('.balls'); if (oldB) oldB.parentNode.replaceChild(ballsEl(g, d.numbers, true), oldB);
-      if (d.jackpot != null) { setText(f('jackpot'), fmtPeso(d.jackpot)); setText(f('kv-jackpot'), fmtPeso(d.jackpot)); }
+      setText(f('jackpot'), fmtPeso(d.jackpot)); setText(f('kv-jackpot'), fmtPeso(d.jackpot));
       setText(f('winners-text'), d.winners == null ? 'winners pending' : d.winners === 0 ? 'No ' + prizeLow(g) + ' winner' : winnersText(d.winners, prizeLow(g) + ' winner'));
       setText(f('kv-winners'), d.winners == null ? '—' : String(d.winners));
       setText(f('kv-drawn'), fmtDateRow(d.date) + ' · ' + SLOT_LABEL[d.slot]);
@@ -421,7 +425,7 @@
       if (d.date < shown) return;
       var old = card.querySelector('.gcard-body .balls');
       if (old) old.parentNode.replaceChild(ballsEl(g, d.numbers, true), old);
-      var jp = card.querySelector('[data-f="jackpot"]'); if (jp && d.jackpot != null) setText(jp, fmtPeso(d.jackpot));
+      var jp = card.querySelector('[data-f="jackpot"]'); if (jp) setText(jp, fmtPeso(d.jackpot));
       var wn = card.querySelector('[data-f="winners"]'); if (wn) setText(wn, d.winners == null ? '—' : String(d.winners));
       card.setAttribute('data-date', d.date); card.setAttribute('data-slot', d.slot); card.setAttribute('data-st', d.status || 'official');
       setBadge(card.querySelector('[data-f="badge"]'), [d.status || 'official']);
@@ -492,7 +496,7 @@
     var hd = document.querySelector('[data-hub="date"]'); if (hd) setText(hd, fmtDateLong(d.date));
     var hl = document.querySelector('[data-hub="day"]'); if (hl) hl.setAttribute('href', '/lottoph/' + g.path + '/' + d.date + '/');
     var hn = document.querySelector('[data-hub="numbers"]'); if (hn) setText(hn, d.numbers.map(function (n) { return padN(g, n); }).join('-'));
-    var hj = document.querySelector('[data-hub="jackpot"]'); if (hj && d.jackpot != null) setText(hj, fmtPeso(d.jackpot));
+    var hj = document.querySelector('[data-hub="jackpot"]'); if (hj) setText(hj, fmtPeso(d.jackpot));
     var hw = document.querySelector('[data-hub="winners"]'); if (hw) setText(hw, d.winners == null ? '' : d.winners === 0 ? ', no ' + prizeLow(g) + ' winner' : ', ' + winnersText(d.winners, prizeLow(g) + ' winner'));
     var hs = document.querySelector('[data-hub="slots"]');
     if (hs) {

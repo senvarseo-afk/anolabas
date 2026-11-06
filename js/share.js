@@ -309,5 +309,14 @@
     if (info.g.logo) waits.push(new Promise(function (res) { var im = new Image(); im.onload = function () { info.logo = im; res(); }; im.onerror = function () { res(); }; setTimeout(res, 900); im.src = info.g.logo; }));
     Promise.all(waits).then(draw, draw);
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab' || !open) return;
+    // Keep keyboard focus inside the open sheet.
+    var items = [].filter.call(open.root.querySelectorAll('a[href], button, input, select, textarea'), function (el) { return !el.disabled && el.offsetParent !== null; });
+    if (!items.length) { e.preventDefault(); return; }
+    var first = items[0], last = items[items.length - 1], at = document.activeElement;
+    if (e.shiftKey && (at === first || !open.root.contains(at))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (at === last || !open.root.contains(at))) { e.preventDefault(); first.focus(); }
+  });
 })();
