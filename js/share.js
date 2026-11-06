@@ -158,6 +158,7 @@
       x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(0, Y, S, H);
       x.fillStyle = GOLD; x.fillRect(0, Y, 14, H);
       var cols = [['Draw', info.rows[0].label], [info.g.type === 'lotto' ? 'Jackpot' : info.g.slots && info.g.slots.length === 1 ? 'First prize' : 'Prize', (info.prize || '—').replace(/\.\d+$/, '')], ['Winners', info.winners || '—']];
+      if (info.g.slots && info.g.slots.length > 1) cols.pop(); // no confirmed winner count for Swertres and EZ2
       var cw = (S - 144) / 3;
       cols.forEach(function (col, i) {
         var X = 72 + i * cw;

@@ -216,6 +216,7 @@
     j.draws.forEach(function (d) {
       if (!d || !BY[d.game] || !Array.isArray(d.numbers) || !ORDER[d.slot] || !/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return;
       d.numbers = d.numbers.map(String);
+      if (daily(BY[d.game])) d.winners = null; // not national figures; see src/data/data-quality.json
       var k = d.game + '|' + d.date + '|' + d.slot, sig = sigOf(d);
       var wasReceived = isReceived(d.game, d.date, d.slot), prevSig = sigs[k];
       sigs[k] = sig;
@@ -295,8 +296,7 @@
       if (d.date > shown) slots.textContent = '';
       var box = document.createElement('div'); box.className = 'bslot'; box.setAttribute('data-slot', d.slot); box.setAttribute('data-st', d.status || 'official');
       var t = document.createElement('span'); t.className = 'bslot-t'; t.textContent = SLOT_LABEL[d.slot];
-      var w = document.createElement('span'); w.className = 'bslot-w'; w.textContent = winnersText(d.winners);
-      box.appendChild(t); box.appendChild(ballsEl(g, d.numbers, true, 'sm')); box.appendChild(w);
+      box.appendChild(t); box.appendChild(ballsEl(g, d.numbers, true, 'sm'));
       var existing = slots.querySelector('.bslot[data-slot="' + d.slot + '"]');
       if (existing) slots.replaceChild(box, existing);
       else {
@@ -312,9 +312,6 @@
         row.setAttribute('data-slot', d.slot); row.setAttribute('data-st', d.status || 'official');
       }
       setText(f('draws'), all.length + ' draw' + (all.length === 1 ? '' : 's'));
-      var total = 0, known = true;
-      all.forEach(function (b) { var m = /^([\d,]+) /.exec(b.querySelector('.bslot-w').textContent); if (m) total += +m[1].replace(/,/g, ''); else known = false; });
-      setText(f('winners-text'), known ? total.toLocaleString() + ' winners' : 'winners pending');
     } else {
       var oldB = ballsWrap && ballsWrap.querySelector('.balls'); if (oldB) oldB.parentNode.replaceChild(ballsEl(g, d.numbers, true), oldB);
       if (d.jackpot != null) { setText(f('jackpot'), fmtPeso(d.jackpot)); setText(f('kv-jackpot'), fmtPeso(d.jackpot)); }
@@ -341,8 +338,8 @@
       tr.setAttribute('data-game', d.game); tr.setAttribute('data-date', d.date); tr.setAttribute('data-slot', d.slot); tr.setAttribute('data-st', d.status || 'official');
       var th = document.createElement('th'); th.setAttribute('scope', 'row'); th.textContent = SLOT_LABEL[d.slot];
       var td = document.createElement('td'); td.appendChild(ballsEl(g, d.numbers, true, 'sm'));
-      var tw = document.createElement('td'); tw.className = 'num muted small'; tw.textContent = winnersText(d.winners);
-      tr.appendChild(th); tr.appendChild(td); tr.appendChild(tw);
+      tr.appendChild(th); tr.appendChild(td);
+      if (!daily(g)) { var tw = document.createElement('td'); tw.className = 'num muted small'; tw.textContent = winnersText(d.winners); tr.appendChild(tw); }
       var existing = tbody.querySelector('tr[data-slot="' + d.slot + '"]');
       if (existing) tbody.replaceChild(tr, existing);
       else {
@@ -426,10 +423,7 @@
       var nx = nextSlot(g, Date.now()), b = v.querySelector('b'), sp = v.querySelector('span');
       var nextText = nx ? 'Next draw ' + mdShort(nx.date) + ', ' + SLOT_LABEL[nx.slot] + '.' : '';
       if (daily(g)) {
-        var vals = cards.map(function (c) { var w = c.querySelectorAll('.meta b')[1]; return w ? parseInt(w.textContent.replace(/,/g, ''), 10) : NaN; });
-        var known = vals.every(function (x) { return !isNaN(x); }), total = vals.reduce(function (a, x) { return a + (x || 0); }, 0);
-        v.hidden = !known;
-        if (known) setText(b, winnersText(total));
+        v.hidden = false;
       } else {
         v.hidden = d.winners == null;
         if (d.winners != null) { setText(b, d.winners ? prizeCap(g) + ' won' : 'No ' + prizeLow(g) + ' winner'); b.className = d.winners ? 'won' : ''; }
@@ -459,7 +453,7 @@
     var meta = document.createElement('div'); meta.className = 'meta';
     var stat = function (label, value) { var s = document.createElement('span'); s.appendChild(document.createTextNode(label + ': ')); var v = document.createElement('b'); v.className = 'tabnum'; v.textContent = value; s.appendChild(v); return s; };
     meta.appendChild(stat(daily(g) ? 'Prize' : prizeCap(g), fmtPeso(d.jackpot)));
-    meta.appendChild(stat('Winners', d.winners == null ? '—' : String(d.winners)));
+    if (!daily(g)) meta.appendChild(stat('Winners', d.winners == null ? '—' : String(d.winners)));
     var sh = document.createElement('button'); sh.type = 'button'; sh.className = 'sharebtn'; sh.setAttribute('data-share', ''); sh.setAttribute('aria-label', 'Share ' + g.name + ' ' + d.slot + ' result'); sh.textContent = 'Share';
     meta.appendChild(sh);
     var newBalls = ballsEl(g, d.numbers.map(function (n) { return padN(g, n); }), true, 'lg');
@@ -491,7 +485,7 @@
     a.href = href; a.textContent = fmtDateRow(d.date); td1.appendChild(a);
     td2.className = 'balls-cell'; td2.appendChild(ballsEl(g, d.numbers.map(function (n) { return padN(g, n); }), false, 'sm'));
     td3.className = 'num'; td3.setAttribute('data-label', 'Winners'); td3.textContent = d.winners == null ? '—' : String(d.winners);
-    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    tr.appendChild(td1); tr.appendChild(td2); if (!daily(g)) tr.appendChild(td3);
     if (firstA && firstA.getAttribute('href') === href) { tb.replaceChild(tr, firstRow); return; }
     tb.insertBefore(tr, firstRow);
     if (tb.children.length > 30) tb.removeChild(tb.lastElementChild);
