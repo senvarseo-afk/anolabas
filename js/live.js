@@ -186,6 +186,15 @@
       if (bar && cta.parentNode === bar.parentNode && (on !== (cta.nextElementSibling === bar))) cta.parentNode.insertBefore(on ? cta : bar, on ? bar : cta);
     }
   }
+  /* /yesterday/ carries two days, because the site is not rebuilt at midnight: show the one that is yesterday in Manila now. */
+  function renderYesterday(now) {
+    var secs = [].slice.call(document.querySelectorAll('[data-yday]')); if (!secs.length) return;
+    var y = iso(addDays(mnl(now), -1)), hit = secs.filter(function (s) { return s.getAttribute('data-yday') === y; })[0];
+    var stale = document.querySelector('[data-yday-stale]'); if (stale) stale.hidden = !!hit;
+    if (!hit) return;
+    secs.forEach(function (s) { s.hidden = s !== hit; });
+    var t = hit.getAttribute('data-title'); if (t) document.title = t;
+  }
   /* The home label is built at deploy time; say what the newest draw is relative to right now. */
   function renderHomeClock(now) {
     var lb = document.querySelector('[data-hb-label]'); if (!lb) return;
@@ -210,6 +219,7 @@
     renderTimeline(now);
     renderHomeClock(now);
     renderDrawNotes(now);
+    renderYesterday(now);
     if (!statusEls.length && !timeline) return;
     var fast = statusEls.some(function (el) { var c = el.querySelector('.st-cd'); return c && /^\d+:\d\d$/.test(c.textContent); });
     timer = setTimeout(tick, fast ? 1000 - (now % 1000) + 5 : 20000);
