@@ -197,7 +197,7 @@
           cls = 'win'; anyWin = true;
           body = 'Matched ' + r.matched + ' of ' + total + ' — ' + r.tier + '.<span class="sub">' + (r.pool
             ? 'Your share of the ' + L.peso(r.pool) + ' pool, divided equally among all winning standard bets this draw. The amount depends on how many tickets won, so only PCSO validation can give the final figure. '
-            : 'Set by PCSO. ') + 'A share above ₱10,000 is taxed 20%. <a href="/guide/how-to-play-' + g.path + '/">See the prize table</a></span>';
+            : 'Set by PCSO. ') + 'A share above ₱10,000 is taxed 20%. <a href="/lottoph/guide/how-to-play-' + g.path + '/">See the prize table</a></span>';
         } else if (r.prize > 0) {
           cls = 'win'; anyWin = true;
           var split = r.jackpot && d.winners > 1, gross = split ? r.prize / d.winners : r.prize;
@@ -223,8 +223,8 @@
         lines.push(head + ' — ' + (r.first ? r.tier + ' (minimum ' + L.peso(r.firstMin) + ', share of the pool)' : r.prize === null ? r.tier + ' (share of the prize pool)' : r.prize > 0 ? r.tier + ' ' + L.peso(r.jackpot && d.winners > 1 ? r.prize / d.winners : r.prize) : 'no prize'));
       });
     });
-    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on LottoPH Today — only PCSO validation is final. ' + location.origin + '/check/';
-    html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
+    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on LottoPH Today — only PCSO validation is final. ' + location.origin + '/lottoph/check/';
+    html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/lottoph/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/lottoph/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/lottoph/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
     elOut.innerHTML = html;
     $('ck-copy').addEventListener('click', function () { L.copyText(share).then(function () { setStatus('Result copied.'); }, function () { setStatus('Copy not available on this browser.'); }); });
     elOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -254,7 +254,7 @@
   var qn = q.getAll('n').map(function (s) { return s.split(/[-,\s]+/).map(function (x) { return parseInt(x, 10); }).filter(function (x) { return !isNaN(x); }); }).filter(function (a) { return a.length; });
   if (qn.length) pendingNums = qn;
 
-  elGame.addEventListener('change', function () { loadFor(elGame.value); history.replaceState(null, '', '/check/?game=' + elGame.value); });
+  elGame.addEventListener('change', function () { loadFor(elGame.value); history.replaceState(null, '', '/lottoph/check/?game=' + elGame.value); });
   elDate.addEventListener('change', function () {
     if (elDate.value === '__more') { elDatePick.hidden = false; elDatePick.focus(); try { elDatePick.showPicker && elDatePick.showPicker(); } catch (e) {} return; }
     elDatePick.hidden = true; fillSlots(); elOut.innerHTML = '';

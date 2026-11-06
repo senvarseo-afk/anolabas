@@ -292,7 +292,7 @@
     var hits = data ? L.findCombination(g, data.draws, nums) : [];
     out.innerHTML = L.ballsHTML(g, isLotto ? L.sortNums(nums) : nums, 'sm') + '<div class="small" style="margin-top:6px">' + flagsHTML(nums) + '</div>' +
       (data ? '<p class="small muted">' + (hits.length ? 'Appeared before: ' + hits.slice(0, 3).map(function (d) { return L.fmtShort(d.date); }).join(', ') + (hits.length > 3 ? '…' : '') : 'Never appeared in ' + data.draws.length.toLocaleString() + ' recorded draws.') + '</p>' : '') +
-      '<div class="btn-row"><button type="button" class="btn ghost sm" id="aid-pattern-save">Save to my numbers</button><a class="btn sec sm" href="/check/?game=' + g.slug + '&n=' + nums.join('-') + '">Check this vs latest draw</a></div>';
+      '<div class="btn-row"><button type="button" class="btn ghost sm" id="aid-pattern-save">Save to my numbers</button><a class="btn sec sm" href="/lottoph/check/?game=' + g.slug + '&n=' + nums.join('-') + '">Check this vs latest draw</a></div>';
     $('aid-pattern-save').addEventListener('click', function () { var list = L.myNumbers(); list.unshift({ game: g.slug, path: g.path, short: g.short, nums: isLotto ? L.sortNums(nums) : nums, saved: L.todayManila() }); L.saveMyNumbers(list); renderMy(); setStatus('Saved to my numbers.'); });
   });
   function renderMy() {
@@ -301,7 +301,7 @@
     ul.innerHTML = list.map(function (it, i) {
       var gg = cfg.games.filter(function (x) { return x.slug === it.game; })[0] || g;
       return '<li><span class="chip">' + L.esc(it.short || gg.short) + '</span><span class="nums">' + it.nums.map(function (n) { return L.pad(gg, n); }).join('-') + '</span><span class="small muted">' + L.esc(it.saved || '') + '</span>' +
-        '<a class="btn pri sm" href="/check/?game=' + encodeURIComponent(it.game) + '&n=' + it.nums.join('-') + '">Check</a><button type="button" class="btn link sm" data-del="' + i + '">Remove</button></li>';
+        '<a class="btn pri sm" href="/lottoph/check/?game=' + encodeURIComponent(it.game) + '&n=' + it.nums.join('-') + '">Check</a><button type="button" class="btn link sm" data-del="' + i + '">Remove</button></li>';
     }).join('');
   }
   $('my-list').addEventListener('click', function (e) { var b = e.target.closest('[data-del]'); if (!b) return; var list = L.myNumbers(); list.splice(+b.getAttribute('data-del'), 1); L.saveMyNumbers(list); renderMy(); });

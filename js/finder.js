@@ -15,7 +15,7 @@
   function game() { return BY[elGame ? elGame.value : cfg[0].slug]; }
   function load(slug) {
     if (cache[slug]) return Promise.resolve(cache[slug]);
-    return fetch('/data/' + slug + '.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { cache[slug] = j.rows || []; return cache[slug]; });
+    return fetch('/lottoph/data/' + slug + '.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { cache[slug] = j.rows || []; return cache[slug]; });
   }
   function longDate(iso) {
     var p = iso.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
@@ -47,7 +47,7 @@
       var box = el('div', 'finder-result');
       var head = el('div', 'finder-result-head');
       head.appendChild(el('b', null, g.name + ' · ' + longDate(date)));
-      if (day.length) { var a = el('a', null, 'Full page ›'); a.href = '/' + g.path + '/' + date + '/'; head.appendChild(a); }
+      if (day.length) { var a = el('a', null, 'Full page ›'); a.href = '/lottoph/' + g.path + '/' + date + '/'; head.appendChild(a); }
       box.appendChild(head);
       if (day.length) {
         day.forEach(function (r) {
