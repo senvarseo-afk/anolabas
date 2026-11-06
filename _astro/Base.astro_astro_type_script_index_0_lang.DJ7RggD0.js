@@ -1,0 +1,1 @@
+import{n as a}from"./router.2W7FzLmj.js";window.lphNavigate=a;let e=!0;document.addEventListener("astro:page-load",()=>{if(e){e=!1;return}const t=window.gtag;typeof t=="function"&&t("event","page_view",{page_location:location.href,page_title:document.title})});
