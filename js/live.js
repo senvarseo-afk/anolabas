@@ -246,7 +246,7 @@
     inFlight = true;
     var id = ++reqId, ctrl = window.AbortController ? new AbortController() : null;
     var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 15000);
-    fetch('/lottoph/live/latest.json', { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+    fetch('/anolabas/live/latest.json', { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) { if (id !== reqId) return; failures = 0; if (j && Array.isArray(j.draws)) ingest(j); })
       .catch(function () { failures++; })
@@ -395,7 +395,7 @@
       row.setAttribute('data-slot', d.slot); row.setAttribute('data-st', d.status || 'official');
     }
     row.setAttribute('data-date', d.date);
-    var dateA = f('date'); if (dateA) { setText(dateA, 'Draw page: ' + fmtDateShort(d.date) + ' ›'); dateA.setAttribute('href', '/lottoph/' + g.path + '/' + d.date + '/'); }
+    var dateA = f('date'); if (dateA) { setText(dateA, 'Draw page: ' + fmtDateShort(d.date) + ' ›'); dateA.setAttribute('href', '/anolabas/' + g.path + '/' + d.date + '/'); }
     var sub = f('sub'); if (sub) setText(sub, fmtDateRow(d.date) + ' · ' + (daily(g) ? ((row.querySelectorAll('.bslot').length) + ' of ' + g.slots.length + ' draws') : SLOT_LABEL[d.slot]));
     toFlash.push(row);
   }
@@ -431,7 +431,7 @@
       card.setAttribute('data-date', d.date); card.setAttribute('data-slot', d.slot); card.setAttribute('data-st', d.status || 'official');
       setBadge(card.querySelector('[data-f="badge"]'), [d.status || 'official']);
     }
-    if (dateA) { setText(dateA, fmtDateShort(d.date)); dateA.setAttribute('href', '/lottoph/' + g.path + '/' + d.date + '/'); }
+    if (dateA) { setText(dateA, fmtDateShort(d.date)); dateA.setAttribute('href', '/anolabas/' + g.path + '/' + d.date + '/'); }
     toFlash.push(card);
   }
   /* home: the hero shows the newest Swertres and EZ2 draw; six-number draws of that evening are named under it */
@@ -458,7 +458,7 @@
     also.setAttribute('data-date', d.date);
     if ([].some.call(also.querySelectorAll('a'), function (a) { return a.textContent === g.short; })) return;
     if (also.querySelector('a')) also.appendChild(document.createTextNode(', '));
-    var a = document.createElement('a'); a.href = '/lottoph/' + g.path + '/'; a.textContent = g.short; also.appendChild(a);
+    var a = document.createElement('a'); a.href = '/anolabas/' + g.path + '/'; a.textContent = g.short; also.appendChild(a);
   }
   /* a six-number, 4D or 6D draw that arrives live joins the hero the same way a built one does */
   function heroExtra(box, g, d) {
@@ -466,7 +466,7 @@
     if (!el) {
       el = document.createElement('div'); el.className = 'hb-game hb-extra'; el.setAttribute('data-hero-extra', d.game); el.hidden = true;
       var name = document.createElement('div'); name.className = 'hb-name';
-      var a = document.createElement('a'); a.href = '/lottoph/' + g.path + '/'; a.textContent = g.short;
+      var a = document.createElement('a'); a.href = '/anolabas/' + g.path + '/'; a.textContent = g.short;
       var slot = document.createElement('span'); slot.setAttribute('data-f', 'slot');
       name.appendChild(a); name.appendChild(slot); el.appendChild(name); el.appendChild(ballsEl(g, [], false, 'sm')); box.appendChild(el);
     }
@@ -495,7 +495,7 @@
     var cards = [].slice.call(document.querySelectorAll('article.card[data-game="' + d.game + '"]'));
     var nums = function (c) { return [].map.call(c.querySelectorAll('.ball'), function (b) { return b.textContent; }).join('-'); };
     var hd = document.querySelector('[data-hub="date"]'); if (hd) setText(hd, fmtDateLong(d.date));
-    var hl = document.querySelector('[data-hub="day"]'); if (hl) hl.setAttribute('href', '/lottoph/' + g.path + '/' + d.date + '/');
+    var hl = document.querySelector('[data-hub="day"]'); if (hl) hl.setAttribute('href', '/anolabas/' + g.path + '/' + d.date + '/');
     var hn = document.querySelector('[data-hub="numbers"]'); if (hn) setText(hn, d.numbers.map(function (n) { return padN(g, n); }).join('-'));
     var hj = document.querySelector('[data-hub="jackpot"]'); if (hj) setText(hj, fmtPeso(d.jackpot));
     var hw = document.querySelector('[data-hub="winners"]'); if (hw) setText(hw, d.winners == null ? '' : d.winners === 0 ? ', no ' + prizeLow(g) + ' winner' : ', ' + winnersText(d.winners, prizeLow(g) + ' winner'));
@@ -524,7 +524,7 @@
       if (bar) {
         setText(bar.querySelector('.db-d b'), fmtDateShort(d.date));
         var prev = bar.querySelector('a[data-dir="prev"]');
-        if (prev) { prev.setAttribute('href', '/lottoph/' + g.path + '/' + oldDate + '/'); prev.setAttribute('aria-label', 'Previous draw: ' + fmtDateRow(oldDate)); }
+        if (prev) { prev.setAttribute('href', '/anolabas/' + g.path + '/' + oldDate + '/'); prev.setAttribute('aria-label', 'Previous draw: ' + fmtDateRow(oldDate)); }
       }
     }
   }
@@ -587,7 +587,7 @@
   /* draw-time page: the newest draw joins the top of its table */
   function updateSlotRows(g, d) {
     var tb = document.querySelector('[data-slot-rows]'); if (!tb) return;
-    var href = '/lottoph/' + g.path + '/' + d.date + '/', firstRow = tb.querySelector('tr'), firstA = firstRow && firstRow.querySelector('a');
+    var href = '/anolabas/' + g.path + '/' + d.date + '/', firstRow = tb.querySelector('tr'), firstA = firstRow && firstRow.querySelector('a');
     if (firstA && firstA.getAttribute('href') > href) return;
     var tr = document.createElement('tr'), td1 = document.createElement('td'), td2 = document.createElement('td'), td3 = document.createElement('td'), a = document.createElement('a');
     a.href = href; a.textContent = fmtDateRow(d.date); td1.appendChild(a);
@@ -631,8 +631,8 @@
       setOpen(row, true);
       row.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' });
       row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
-    } else if (window.lphNavigate) window.lphNavigate('/lottoph/' + t.path + '/');
-    else location.href = '/lottoph/' + t.path + '/';
+    } else if (window.lphNavigate) window.lphNavigate('/anolabas/' + t.path + '/');
+    else location.href = '/anolabas/' + t.path + '/';
   }
 
   /* ---------- board rows: expand in place ---------- */
@@ -703,14 +703,14 @@
       if (on) { a.setAttribute('aria-current', 'page'); a.closest('.bottomnav').style.setProperty('--x', (i * 20) + '%'); } else a.removeAttribute('aria-current');
     });
     [].forEach.call(document.querySelectorAll('.mainnav a'), function (a) {
-      var href = a.getAttribute('href'); var on = (nav && href === ({ today: '/lottoph/', history: '/lottoph/history/', simulator: '/lottoph/simulator/', check: '/lottoph/check/', guides: '/lottoph/guide/' })[nav]) || (href !== '/lottoph/' && location.pathname.indexOf(href) === 0 && href.length > 1 && !nav);
+      var href = a.getAttribute('href'); var on = (nav && href === ({ today: '/anolabas/', history: '/anolabas/history/', simulator: '/anolabas/simulator/', check: '/anolabas/check/', guides: '/anolabas/guide/' })[nav]) || (href !== '/anolabas/' && location.pathname.indexOf(href) === 0 && href.length > 1 && !nav);
       if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     var strip = document.querySelector('.gamestrip-inner');
     if (strip) {
       var tabs = [].slice.call(strip.querySelectorAll('a')), active = null;
       tabs.forEach(function (a) {
-        var on = game ? a.getAttribute('data-strip') && a.getAttribute('href') === '/lottoph/' + game + '/' : a.getAttribute('href') === '/lottoph/' && location.pathname === '/lottoph/';
+        var on = game ? a.getAttribute('data-strip') && a.getAttribute('href') === '/anolabas/' + game + '/' : a.getAttribute('href') === '/anolabas/' && location.pathname === '/anolabas/';
         a.classList.toggle('on', !!on); if (on) active = a;
       });
       var ind = strip.querySelector('.gs-ind');

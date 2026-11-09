@@ -114,7 +114,7 @@
           cls = 'win'; win = true;
           body = 'Matched ' + r.matched + ' of ' + total + ' — ' + r.tier + '.<span class="sub">' + (r.pool
             ? 'Your share of the ' + L.peso(r.pool) + ' pool, divided equally among all winning standard bets this draw. The amount depends on how many tickets won, so only PCSO validation can give the final figure. '
-            : 'Set by PCSO. ') + 'A share above ₱10,000 is taxed 20%. <a href="/lottoph/guide/how-to-play-' + g.path + '/">See the prize table</a></span>';
+            : 'Set by PCSO. ') + 'A share above ₱10,000 is taxed 20%. <a href="/anolabas/guide/how-to-play-' + g.path + '/">See the prize table</a></span>';
         } else if (r.prize > 0) {
           cls = 'win'; win = true;
           var split = r.jackpot && d.winners > 1, gross = split ? r.prize / d.winners : r.prize;

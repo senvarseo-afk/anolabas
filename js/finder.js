@@ -15,7 +15,7 @@
   function game() { return BY[elGame ? elGame.value : cfg[0].slug]; }
   function load(slug) {
     if (cache[slug]) return Promise.resolve(cache[slug]);
-    return fetch('/lottoph/data/' + slug + '.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { cache[slug] = j.rows || []; return cache[slug]; });
+    return fetch('/anolabas/data/' + slug + '.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { cache[slug] = j.rows || []; return cache[slug]; });
   }
   function longDate(iso) {
     var p = iso.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
@@ -35,7 +35,7 @@
   function setBtn(a, g, date, word) {
     if (!a) return;
     a.classList.toggle('off', !date);
-    if (date) { a.href = '/lottoph/' + g.path + '/' + date + '/'; a.setAttribute('aria-label', word + ' draw: ' + shortDay(date)); a.removeAttribute('aria-disabled'); a.removeAttribute('tabindex'); }
+    if (date) { a.href = '/anolabas/' + g.path + '/' + date + '/'; a.setAttribute('aria-label', word + ' draw: ' + shortDay(date)); a.removeAttribute('aria-disabled'); a.removeAttribute('tabindex'); }
     else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); a.setAttribute('tabindex', '-1'); }
   }
   function setDay(g, rows, date) {
@@ -50,7 +50,7 @@
     if (g.slots.length < 2 && top[4] != null) parts.push(Number(top[4]).toLocaleString() + ' winner' + (top[4] === 1 ? '' : 's'));
     parts.push(day.some(function (r) { return !r[5]; }) ? 'Includes an archive record' : 'Checked against PCSO-hosted records');
     hday.querySelector('[data-hday-note]').textContent = parts.join(' · ');
-    hday.querySelector('[data-hday-full]').href = '/lottoph/' + g.path + '/' + date + '/';
+    hday.querySelector('[data-hday-full]').href = '/anolabas/' + g.path + '/' + date + '/';
     var dates = []; rows.forEach(function (r) { if (dates[dates.length - 1] !== r[0]) dates.push(r[0]); });
     var i = dates.indexOf(date);
     bar.querySelector('.db-d b').textContent = longDate(date);
@@ -86,7 +86,7 @@
       var box = el('div', 'finder-result');
       var head = el('div', 'finder-result-head');
       head.appendChild(el('b', null, g.name + ' · ' + longDate(date)));
-      if (day.length) { var a = el('a', null, 'Full page ›'); a.href = '/lottoph/' + g.path + '/' + date + '/'; head.appendChild(a); }
+      if (day.length) { var a = el('a', null, 'Full page ›'); a.href = '/anolabas/' + g.path + '/' + date + '/'; head.appendChild(a); }
       box.appendChild(head);
       if (day.length) {
         day.forEach(function (r) {

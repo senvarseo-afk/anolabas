@@ -10,7 +10,7 @@
   var cfg = { games: [] };
   try { cfg = JSON.parse((document.getElementById('lph-schedule') || {}).textContent || '{}'); } catch (e) {}
   var BY = {}; (cfg.games || []).forEach(function (g) { BY[g.slug] = g; });
-  var SITE = location.origin + '/lottoph';
+  var SITE = location.origin + '/anolabas';
   var HOST = SITE.replace(/^https?:\/\//, '');
   var S = 1080, GOLD = '#f5b400';
   var FONT = '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';

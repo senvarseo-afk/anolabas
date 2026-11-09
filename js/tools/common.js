@@ -10,7 +10,7 @@
 
   function loadGame(slug) {
     if (!cache[slug]) {
-      cache[slug] = fetch('/lottoph/data/' + slug + '.json').then(function (r) {
+      cache[slug] = fetch('/anolabas/data/' + slug + '.json').then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (j) {

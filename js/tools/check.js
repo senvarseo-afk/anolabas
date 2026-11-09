@@ -112,8 +112,8 @@
         lines.push(head + ' — ' + v.summary);
       });
     });
-    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on Ano Labas — only PCSO validation is final. ' + location.origin + '/lottoph/check/';
-    html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/lottoph/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/lottoph/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/lottoph/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
+    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on Ano Labas — only PCSO validation is final. ' + location.origin + '/anolabas/check/';
+    html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/anolabas/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/anolabas/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/anolabas/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
     elOut.innerHTML = html;
     $('ck-copy').addEventListener('click', function () { L.copyText(share).then(function () { setStatus('Result copied.'); }, function () { setStatus('Copy not available on this browser.'); }); });
     elOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -145,7 +145,7 @@
   var qn = q.getAll('n').map(function (s) { return s.split(/[-,\s]+/).map(function (x) { return parseInt(x, 10); }).filter(function (x) { return !isNaN(x); }); }).filter(function (a) { return a.length; });
   if (qn.length) pendingNums = qn;
 
-  elGame.addEventListener('change', function () { loadFor(elGame.value); history.replaceState(null, '', '/lottoph/check/?game=' + elGame.value); });
+  elGame.addEventListener('change', function () { loadFor(elGame.value); history.replaceState(null, '', '/anolabas/check/?game=' + elGame.value); });
   elDate.addEventListener('change', function () {
     if (elDate.value === '__more') { elDatePick.hidden = false; elDatePick.focus(); try { elDatePick.showPicker && elDatePick.showPicker(); } catch (e) {} return; }
     elDatePick.hidden = true; fillSlots(); elOut.innerHTML = '';

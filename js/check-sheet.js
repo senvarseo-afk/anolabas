@@ -13,16 +13,16 @@
   function boot() {
     // common.js resets window.LPH when another tool page runs, so the rules are checked on every open.
     var rules = window.LPH && window.LPH.checker ? Promise.resolve()
-      : (window.LPH ? Promise.resolve() : addScript('/lottoph/js/tools/common.js')).then(function () { return addScript('/lottoph/js/tools/check-core.js'); });
+      : (window.LPH ? Promise.resolve() : addScript('/anolabas/js/tools/common.js')).then(function () { return addScript('/anolabas/js/tools/check-core.js'); });
     if (ready) return rules.then(function () { return ready; });
-    ready = rules.then(function () { return fetch('/lottoph/data/check-config.json'); })
+    ready = rules.then(function () { return fetch('/anolabas/data/check-config.json'); })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) { j.games.forEach(function (g) { byId[g.slug] = g; }); claim = j.claim; })
       .catch(function (e) { ready = null; throw e; });
     return ready;
   }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  function fullUrl(t) { return '/lottoph/check/?game=' + t.game + '&date=' + t.date + '&slot=' + t.slot; }
+  function fullUrl(t) { return '/anolabas/check/?game=' + t.game + '&date=' + t.date + '&slot=' + t.slot; }
   function numbersIn(root) { return [].map.call(root.querySelectorAll('.ball'), function (b) { return b.textContent.trim(); }); }
 
   function fromRow(row) {
