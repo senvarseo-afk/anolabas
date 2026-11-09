@@ -1,4 +1,4 @@
-/* LottoPH Today — live layer (motion package C, reviewed with Codex 2026-11-04; interaction pass 2026-11-05).
+/* Ano Labas — live layer (motion package C, reviewed with Codex 2026-11-04; interaction pass 2026-11-05).
  * - Countdown / draw-window / awaiting-result status in Manila time (UTC+8, no DST)
  * - Today's 2PM / 5PM / 9PM timeline (published only when every scheduled game is in)
  * - Polls /live/latest.json (60 s near draws, 5 min otherwise; paused in background; timeout + backoff)
@@ -198,6 +198,7 @@
     if (!hit) return;
     secs.forEach(function (s) { s.hidden = s !== hit; });
     var t = hit.getAttribute('data-title'); if (t) document.title = t;
+    var hd = document.querySelector('[data-yday-date]'), sh = hit.getAttribute('data-short'); if (hd && sh) hd.textContent = sh;
   }
   /* The home label is built at deploy time; say what the newest draw is relative to right now. */
   function renderHomeClock(now) {

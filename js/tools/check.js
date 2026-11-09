@@ -1,4 +1,4 @@
-/* LottoPH Today — ticket checker. Needs common.js and window.LPH_CHECK = { games: [...] }. */
+/* Ano Labas — ticket checker. Needs common.js and window.LPH_CHECK = { games: [...] }. */
 (function () {
   'use strict';
   var L = window.LPH, cfg = window.LPH_CHECK; if (!L || !cfg) return;
@@ -112,7 +112,7 @@
         lines.push(head + ' — ' + v.summary);
       });
     });
-    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on LottoPH Today — only PCSO validation is final. ' + location.origin + '/lottoph/check/';
+    var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on Ano Labas — only PCSO validation is final. ' + location.origin + '/lottoph/check/';
     html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/lottoph/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/lottoph/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/lottoph/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
     elOut.innerHTML = html;
     $('ck-copy').addEventListener('click', function () { L.copyText(share).then(function () { setStatus('Result copied.'); }, function () { setStatus('Copy not available on this browser.'); }); });

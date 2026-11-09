@@ -1,4 +1,4 @@
-/* LottoPH Today — ticket rules: what a ticket won on one draw, and the sentence that says so.
+/* Ano Labas — ticket rules: what a ticket won on one draw, and the sentence that says so.
    One copy, used by the checker page (check.js) and the in-place drawer (check-sheet.js). Needs common.js.
    L.checker(game, claimTiers) binds the rules to a game; prizes come from games.json. */
 (function (w) {

@@ -133,7 +133,7 @@
     var section = box.closest('.ns-share') || box.parentNode;
     var statusEl = section.querySelector('.ns-status');
     var cached = null, pending = null;
-    var fname = D.filename || 'lottoph.png';
+    var fname = D.filename || 'anolabas.png';
 
     function say(msg) { if (statusEl) statusEl.textContent = msg; }
 

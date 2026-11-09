@@ -1,4 +1,4 @@
-/* LottoPH Today — "Check this draw": a drawer that checks a ticket without leaving the results.
+/* Ano Labas — "Check this draw": a drawer that checks a ticket without leaving the results.
  * The draw is locked; the rules are the checker page's own (tools/check-core.js), loaded on first use.
  * Every trigger is a real link to /check/, so the page still works when this script or its data cannot load. */
 (function () {

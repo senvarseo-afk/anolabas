@@ -1,4 +1,4 @@
-/* LottoPH Today — sharing (style 1 "broadcast" cards + bottom-drawer share sheet, chosen 2026-11-04).
+/* Ano Labas — sharing (style 1 "broadcast" cards + bottom-drawer share sheet, chosen 2026-11-04).
  * window.LPHCard  : shared 1080×1080 drawing helpers (navy broadcast background, gold-ringed balls, footer)
  * window.LPHShare : open({ blob | canvas, dataUrl?, text, url, filename, opener }) -> bottom drawer with
  *                   Share (system, when files are supported) · Save · Facebook · Messenger · Viber · Copy link
@@ -14,6 +14,9 @@
   var HOST = SITE.replace(/^https?:\/\//, '');
   var S = 1080, GOLD = '#f5b400';
   var FONT = '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+  /* Brand (growth/28 §11, F2): three-shape mark + "Ano Labas" whose o is a gold ring sized to the x-height. */
+  function brandMark(x, px, py, s) { var k = s / 64; x.save(); x.translate(px, py); x.scale(k, k); x.fillStyle = '#0f2a5f'; rr(x, 0, 0, 64, 64, 14); x.fill(); x.strokeStyle = '#f5b400'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(13, 26); x.lineTo(22, 26); x.moveTo(10, 34); x.lineTo(20, 34); x.stroke(); x.fillStyle = '#f5b400'; x.beginPath(); x.arc(39, 32, 15, 0, Math.PI * 2); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 3.5; x.beginPath(); x.arc(39, 32, 10.5, Math.PI * 1.15, Math.PI * 1.55); x.stroke(); x.restore(); }
+  function brandWord(x, px, py, size, color) { x.save(); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.font = '900 ' + size + 'px ' + FONT; x.fillStyle = color; var base = py + size * 0.36; x.fillText('An', px, base); var w = x.measureText('An').width, d = size * 0.58, cx = px + w + size * 0.02 + d / 2, cy = base - d / 2 + size * 0.01; x.strokeStyle = '#f5b400'; x.lineWidth = d * 0.26; x.beginPath(); x.arc(cx, cy, d / 2 - d * 0.13, 0, Math.PI * 2); x.stroke(); x.strokeStyle = '#fff'; x.lineWidth = d * 0.08; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, d / 2 - d * 0.13, Math.PI * 1.1, Math.PI * 1.45); x.stroke(); x.fillText('Labas', cx + d / 2 + size * 0.26, base); x.restore(); }
   var COND = '"Barlow Condensed", "Arial Narrow", ' + FONT; // display type, same as the site headings
   var MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
 
@@ -30,9 +33,7 @@
     /** brand row + optional VERIFIED pill + kicker / title / sub; returns the y where content can start */
     header: function (x, o) {
       x.textBaseline = 'middle'; x.textAlign = 'left';
-      x.fillStyle = GOLD; x.beginPath(); x.arc(92, 92, 26, 0, Math.PI * 2); x.fill();
-      x.fillStyle = '#0f2a5f'; x.font = '800 22px ' + FONT; x.textAlign = 'center'; x.fillText('PH', 92, 94);
-      x.textAlign = 'left'; x.fillStyle = '#dbe3f2'; x.font = '800 34px ' + FONT; x.fillText('LottoPH Today', 132, 94);
+      brandMark(x, 66, 66, 52); brandWord(x, 132, 94, 34, '#fff');
       if (o.pill) {
         x.font = '800 24px ' + FONT; var w = x.measureText(o.pill).width + 44;
         x.fillStyle = o.pillMuted ? 'rgba(255,255,255,.18)' : GOLD; rr(x, S - 66 - w, 68, w, 50, 25); x.fill();
@@ -234,12 +235,12 @@
       if (!blob || !open || open !== state) return;
       var url = URL.createObjectURL(blob); state.url = url;
       img.src = opts.dataUrl || url;
-      var fname = opts.filename || 'lottoph.png', file = null;
+      var fname = opts.filename || 'anolabas.png', file = null;
       try { file = new File([blob], fname, { type: 'image/png' }); } catch (e) {}
       var canFiles = !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
       if (navigator.share) item('Share', 'share', 'ic-share', function () {
-        var data = { title: 'LottoPH Today', text: opts.text || '', url: opts.url };
-        if (canFiles) data = { files: [file], title: 'LottoPH Today', text: (opts.text || '') + ' ' + (opts.url || '') };
+        var data = { title: 'Ano Labas', text: opts.text || '', url: opts.url };
+        if (canFiles) data = { files: [file], title: 'Ano Labas', text: (opts.text || '') + ' ' + (opts.url || '') };
         navigator.share(data).catch(function () {});
       });
       item('Save', 'save', 'ic-save', function () { var a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); status.textContent = 'Image saved to your downloads.'; });
@@ -303,7 +304,7 @@
     e.preventDefault();
     var info = readCard(card);
     var text = info.g.name + ' · ' + info.date + ': ' + info.rows.map(function (r) { return (info.rows.length > 1 ? r.label + ' ' : '') + r.nums.join('-'); }).join(' | ');
-    var draw = function () { shareSheet({ canvas: renderResult(info), text: text, url: info.url, filename: 'lottoph-' + (info.g.path || 'result') + '.png', opener: b, title: 'Share this result' }); };
+    var draw = function () { shareSheet({ canvas: renderResult(info), text: text, url: info.url, filename: 'anolabas-' + (info.g.path || 'result') + '.png', opener: b, title: 'Share this result' }); };
     var waits = [];
     if (document.fonts && document.fonts.load) waits.push(document.fonts.load('900 60px "Inter Variable"'), document.fonts.load('800 60px "Barlow Condensed"'), document.fonts.load('700 40px "IBM Plex Mono"'));
     if (info.g.logo) waits.push(new Promise(function (res) { var im = new Image(); im.onload = function () { info.logo = im; res(); }; im.onerror = function () { res(); }; setTimeout(res, 900); im.src = info.g.logo; }));

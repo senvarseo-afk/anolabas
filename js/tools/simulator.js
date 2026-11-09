@@ -1,4 +1,4 @@
-/* LottoPH Today — number simulator (for fun) + decision aids. Needs common.js and window.LPH_SIM = { game, games, dream, site }. */
+/* Ano Labas — number simulator (for fun) + decision aids. Needs common.js and window.LPH_SIM = { game, games, dream, site }. */
 (function () {
   'use strict';
   var L = window.LPH, cfg = window.LPH_SIM; if (!L || !cfg) return;
@@ -216,7 +216,7 @@
         : 'Never appeared in the ' + total.toLocaleString() + ' recorded draws since ' + L.fmtShort(since) + '. That is normal — most combinations have never been drawn — and it does not change the odds.';
     }
     if (act === 'download' || act === 'share') {
-      var c = cardFor(nums), fname = 'lottoph-' + g.path + '-simulation-' + label.replace(/[^0-9]+/g, '-') + '.png';
+      var c = cardFor(nums), fname = 'anolabas-' + g.path + '-simulation-' + label.replace(/[^0-9]+/g, '-') + '.png';
       var prev = box.querySelector('[data-preview]');
       prev.innerHTML = '<img alt="Simulation card for ' + L.esc(label) + '" src="' + c.toDataURL('image/png') + '"><p class="small muted">If the download did not start, long-press the image to save it.</p>'; prev.hidden = false;
       if (act === 'download') L.downloadCanvas(c, fname).then(function () { out.textContent = 'Card ready (1080×1350).'; }, function () { out.textContent = 'Long-press the image to save.'; });

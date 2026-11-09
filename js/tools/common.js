@@ -1,4 +1,4 @@
-/* LottoPH Today — shared helpers for client-side tools. Vanilla JS, no dependencies.
+/* Ano Labas — shared helpers for client-side tools. Vanilla JS, no dependencies.
    Data: /data/{slug}.json = {game, generated_at, columns, rows:[[date, slot, [ints], jackpot, winners, official, archive]]} newest first. */
 (function (w) {
   'use strict';
@@ -117,9 +117,10 @@
     var ctx = c.getContext('2d'), font = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
     ctx.fillStyle = '#fffdf7'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#1d4ed8'; ctx.fillRect(0, 0, W, 250);
-    ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(92, 110, 34, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1f1300'; ctx.font = '900 30px ' + font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('PH', 92, 112);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '900 58px ' + font; ctx.fillText('LottoPH Today', 150, 108);
+    (function () { var k = 72 / 64; ctx.save(); ctx.translate(56, 72); ctx.scale(k, k); ctx.fillStyle = '#0f2a5f'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(0, 0, 64, 64, 14) : ctx.rect(0, 0, 64, 64); ctx.fill(); ctx.strokeStyle = '#f5b400'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(13, 26); ctx.lineTo(22, 26); ctx.moveTo(10, 34); ctx.lineTo(20, 34); ctx.stroke(); ctx.fillStyle = '#f5b400'; ctx.beginPath(); ctx.arc(39, 32, 15, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(39, 32, 10.5, Math.PI * 1.15, Math.PI * 1.55); ctx.stroke(); ctx.restore(); })();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fff'; ctx.font = '900 58px ' + font; ctx.fillText('An', 150, 129);
+    (function () { var w = ctx.measureText('An').width, d = 58 * 0.58, cx = 150 + w + 1.2 + d / 2, cy = 129 - d / 2 + 0.6; ctx.strokeStyle = '#f5b400'; ctx.lineWidth = d * 0.26; ctx.beginPath(); ctx.arc(cx, cy, d / 2 - d * 0.13, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = d * 0.08; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, cy, d / 2 - d * 0.13, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText('Labas', cx + d / 2 + 58 * 0.26, 129); })();
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fde68a'; ctx.font = '800 32px ' + font; ctx.fillText(opts.kicker || 'NUMBER SIMULATOR · FOR FUN', 150, 172);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#1e293b'; ctx.font = '900 66px ' + font; ctx.fillText(opts.title, W / 2, 360);
@@ -147,8 +148,8 @@
     ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-Math.PI / 6); ctx.globalAlpha = 0.06; ctx.fillStyle = '#1d4ed8'; ctx.font = '900 150px ' + font; ctx.fillText('SIMULATION', 0, 0); ctx.restore();
     // footer bar
     ctx.fillStyle = '#1d4ed8'; ctx.fillRect(0, H - 150, W, 150);
-    ctx.fillStyle = '#fff'; ctx.font = '800 30px ' + font; ctx.fillText('LottoPH Today · Random · Not a prediction · Not a tip · 18+', W / 2, H - 92);
-    ctx.fillStyle = '#bfdbfe'; ctx.font = '600 26px ' + font; ctx.fillText((opts.site || 'lottophtoday.com') + '  ·  Not affiliated with PCSO', W / 2, H - 48);
+    ctx.fillStyle = '#fff'; ctx.font = '800 30px ' + font; ctx.fillText('Ano Labas · Random · Not a prediction · Not a tip · 18+', W / 2, H - 92);
+    ctx.fillStyle = '#bfdbfe'; ctx.font = '600 26px ' + font; ctx.fillText((opts.site || 'anolabas.com') + '  ·  Not affiliated with PCSO', W / 2, H - 48);
     return c;
   }
 
