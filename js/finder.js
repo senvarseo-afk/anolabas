@@ -78,6 +78,7 @@
     var g = game(), date = elDate.value, slot = elSlot ? elSlot.value : '';
     out.textContent = '';
     if (!date) { out.appendChild(el('p', 'small muted', 'Choose a month, day and year first.')); return; }
+    if (window.anoTrack) window.anoTrack('finder_search', { game: g.path, method: 'date' });
     out.appendChild(el('p', 'small muted', 'Loading…'));
     load(g.slug).then(function (rows) {
       out.textContent = '';

@@ -113,7 +113,11 @@
   }
   function roundRect(ctx, x, y, wd, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + wd, y, x + wd, y + h, r); ctx.arcTo(x + wd, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + wd, y, r); ctx.closePath(); }
   function drawCard(opts) {
-    var W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+    // Several sets: 2-5 in one column; 6-20 in two columns (1-10 left, 11-20 right) on a taller card.
+    var sets = opts.sets && opts.sets.length > 1 ? opts.sets.slice(0, 20) : null;
+    var cols = sets && sets.length > 5 ? 2 : 1, rows = sets ? Math.ceil(sets.length / cols) : 0;
+    var top = 612, area = cols === 2 ? Math.max(400, rows * 88) : 400;
+    var W = 1080, H = 1350 + (area - 400), c = document.createElement('canvas'); c.width = W; c.height = H;
     var ctx = c.getContext('2d'), font = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
     ctx.fillStyle = '#fffdf7'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#1d4ed8'; ctx.fillRect(0, 0, W, 250);
@@ -128,21 +132,47 @@
     // SIMULATION pill
     ctx.fillStyle = '#fef3c7'; roundRect(ctx, W / 2 - 200, 500, 400, 72, 36); ctx.fill();
     ctx.fillStyle = '#b45309'; ctx.font = '900 34px ' + font; ctx.fillText('S I M U L A T I O N', W / 2, 538);
-    // balls
-    var nums = opts.numbers, n = nums.length, size = n > 4 ? 150 : n > 3 ? 190 : 230, gap = n > 4 ? 22 : 36;
-    var total = n * size + (n - 1) * gap, x0 = (W - total) / 2, cy = 740;
-    nums.forEach(function (txt, i) {
-      var cx = x0 + i * (size + gap) + size / 2;
+    function ball(cx, cy, size, txt, small) {
+      var r = small ? Math.round(size * 0.2) : 30, sh = small ? Math.max(4, Math.round(size * 0.05)) : 8;
       ctx.fillStyle = 'rgba(0,0,0,.14)';
-      if (opts.square) { roundRect(ctx, cx - size / 2, cy - size / 2 + 8, size, size, 30); ctx.fill(); } else { ctx.beginPath(); ctx.arc(cx, cy + 8, size / 2, 0, Math.PI * 2); ctx.fill(); }
+      if (opts.square) { roundRect(ctx, cx - size / 2, cy - size / 2 + sh, size, size, r); ctx.fill(); } else { ctx.beginPath(); ctx.arc(cx, cy + sh, size / 2, 0, Math.PI * 2); ctx.fill(); }
       ctx.fillStyle = '#f59e0b';
-      if (opts.square) { roundRect(ctx, cx - size / 2, cy - size / 2, size, size, 30); ctx.fill(); } else { ctx.beginPath(); ctx.arc(cx, cy, size / 2, 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = '#fff'; ctx.font = '900 ' + Math.round(size * 0.5) + 'px ' + font; ctx.fillText(txt, cx, cy + 4);
-    });
+      if (opts.square) { roundRect(ctx, cx - size / 2, cy - size / 2, size, size, r); ctx.fill(); } else { ctx.beginPath(); ctx.arc(cx, cy, size / 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '900 ' + Math.round(size * 0.5) + 'px ' + font; ctx.fillText(txt, cx, cy + (small ? size * 0.03 : 4));
+    }
+    // balls: one large row, or one labelled row per set
+    var modeY = 900, noteY = 980;
+    if (!sets) {
+      var nums = opts.numbers, n = nums.length, size = n > 4 ? 150 : n > 3 ? 190 : 230, gap = n > 4 ? 22 : 36;
+      var total = n * size + (n - 1) * gap, x0 = (W - total) / 2;
+      nums.forEach(function (txt, i) { ball(x0 + i * (size + gap) + size / 2, 740, size, txt); });
+    } else {
+      var maxBalls = 0;
+      sets.forEach(function (s) { maxBalls = Math.max(maxBalls, s.length); });
+      var rowH = cols === 2 ? 88 : Math.min(132, Math.floor(area / rows));
+      var colW = cols === 2 ? 470 : W;
+      // ball size fits the row height; the label column is measured from the widest label ("SET 20"),
+      // then in two columns the balls shrink to fit what is left of the column width
+      var bsize = Math.min(rowH - 16, maxBalls > 4 ? 96 : 116), fontPx = Math.round(Math.min(34, bsize * 0.42));
+      ctx.font = '900 ' + fontPx + 'px ' + font;
+      var labelW = Math.ceil(ctx.measureText('SET ' + sets.length).width) + Math.round(fontPx * 0.7);
+      if (cols === 1) labelW = Math.max(150, labelW);
+      if (cols === 2) bsize = Math.min(bsize, Math.floor((colW - labelW) / (maxBalls + (maxBalls - 1) * 0.16)));
+      var bgap = Math.round(bsize * 0.16), rowW = labelW + maxBalls * bsize + (maxBalls - 1) * bgap;
+      var colGap = 40, blockW = cols === 2 ? 2 * colW + colGap : rowW, bx = (W - blockW) / 2;
+      var y0 = top + (area - rows * rowH) / 2 + rowH / 2;
+      sets.forEach(function (s, k) {
+        var col = cols === 2 ? Math.floor(k / rows) : 0, row = cols === 2 ? k % rows : k;
+        var rx = cols === 2 ? bx + col * (colW + colGap) + (colW - rowW) / 2 : bx, cy = y0 + row * rowH;
+        ctx.textAlign = 'left'; ctx.fillStyle = '#b45309'; ctx.font = '900 ' + fontPx + 'px ' + font; ctx.fillText('SET ' + (k + 1), rx, cy + 2);
+        s.forEach(function (txt, i) { ball(rx + labelW + i * (bsize + bgap) + bsize / 2, cy, bsize, txt, true); });
+      });
+      ctx.textAlign = 'center'; modeY = top + area + 34; noteY = modeY + 52;
+    }
     // mode + note
-    ctx.fillStyle = '#1e293b'; ctx.font = '700 34px ' + font; ctx.fillText(opts.mode || '', W / 2, 900);
-    ctx.fillStyle = '#475569'; ctx.font = '500 30px ' + font;
-    var lines = wrapText(ctx, DISCLAIMER, 900), y = 980;
+    ctx.fillStyle = '#1e293b'; ctx.font = '700 34px ' + font; ctx.fillText(opts.mode || '', W / 2, modeY);
+    ctx.fillStyle = '#475569'; ctx.font = (sets ? '500 26px ' : '500 30px ') + font;
+    var lines = wrapText(ctx, DISCLAIMER, 900), y = noteY;
     lines.forEach(function (l) { ctx.fillText(l, W / 2, y); y += 44; });
     // diagonal watermark
     ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-Math.PI / 6); ctx.globalAlpha = 0.06; ctx.fillStyle = '#1d4ed8'; ctx.font = '900 150px ' + font; ctx.fillText('SIMULATION', 0, 0); ctx.restore();

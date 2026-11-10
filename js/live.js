@@ -1,7 +1,7 @@
 /* Ano Labas — live layer (motion package C, reviewed with Codex 2026-11-04; interaction pass 2026-11-05).
  * - Countdown / draw-window / awaiting-result status in Manila time (UTC+8, no DST)
  * - Today's 2PM / 5PM / 9PM timeline (published only when every scheduled game is in)
- * - Polls /live/latest.json (60 s near draws, 5 min otherwise; paused in background; timeout + backoff)
+ * - Polls /live/current.json (60 s near draws, 5 min otherwise; paused in background; timeout + backoff)
  * - New or corrected result: updates the matching board row / card in place, flashes it, red dot on the game tab,
  *   and shows a "Just drawn" toast that jumps to the row
  * - Home board rows expand in place; bottom nav / game strip active state + sliding indicators
@@ -179,8 +179,10 @@
     var head = document.querySelector('.home-board'); if (!head) return;
     head.classList.toggle('hb-just', on);
     [].forEach.call(document.querySelectorAll('[data-hero-extra]'), function (el) { el.hidden = !(on && el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
-    // A Swertres or EZ2 result still on its way must not sit under "Just drawn" with an older draw.
-    [].forEach.call(document.querySelectorAll('[data-hero-game]'), function (el) { el.hidden = on && !(el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
+    // A Swertres or EZ2 result still on its way must not be offered by "Check this draw" with an older draw.
+    [].forEach.call(document.querySelectorAll('[data-hero-game]'), function (el) {
+      if (on && !(el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot)) el.setAttribute('data-hero-skip', ''); else el.removeAttribute('data-hero-skip');
+    });
     [].forEach.call(document.querySelectorAll('.hboard .brow'), function (el) { el.hidden = !!(on && el.getAttribute('data-date') === date && el.getAttribute('data-slot') === slot); });
     var h = document.querySelector('[data-home-h]'); if (h) setText(h, on ? 'Other games' : 'Latest results');
     var btn = document.querySelector('[data-home-check]');
@@ -199,6 +201,71 @@
     secs.forEach(function (s) { s.hidden = s !== hit; });
     var t = hit.getAttribute('data-title'); if (t) document.title = t;
     var hd = document.querySelector('[data-yday-date]'), sh = hit.getAttribute('data-short'); if (hd && sh) hd.textContent = sh;
+  }
+  /* ---------- home "today" grid: Swertres and EZ2, one cell per draw time ---------- */
+  var dayNums = {}, dayRoll = {}; // dayNums[slug][date][slot] = numbers (built + live); dayRoll marks draws that should roll in
+  function seedDayNums() {
+    var box = document.querySelector('[data-hday]'); if (!box) return;
+    var j = {}; try { j = JSON.parse(box.getAttribute('data-hday') || '{}'); } catch (e) {}
+    Object.keys(j).forEach(function (slug) {
+      var m = dayNums[slug] || (dayNums[slug] = {});
+      Object.keys(j[slug]).forEach(function (date) {
+        var day = m[date] || (m[date] = {});
+        Object.keys(j[slug][date]).forEach(function (slot) { if (!day[slot]) day[slot] = j[slug][date][slot]; });
+      });
+    });
+  }
+  function hasDay(slugs, date) { return slugs.some(function (s) { return dayNums[s] && dayNums[s][date] && Object.keys(dayNums[s][date]).length; }); }
+  function renderHeroDay(now) {
+    var box = document.querySelector('[data-hday]'); if (!box) return;
+    var rows = [].slice.call(box.querySelectorAll('[data-hd-game]')), slugs = rows.map(function (r) { return r.getAttribute('data-hd-game'); });
+    var d = mnl(now), today = iso(d), day = today;
+    // Before the first draw (or on a no-draw day) the newest finished day is what readers want: last night's results.
+    if (!hasDay(slugs, today) && (now < startMs(today, '2PM') || noDrawOn(d))) {
+      var dates = []; slugs.forEach(function (s) { Object.keys(dayNums[s] || {}).forEach(function (k) { if (k < today) dates.push(k); }); });
+      day = dates.sort().reverse()[0] || today;
+    }
+    box.setAttribute('data-day', day);
+    var firstNext = null;
+    if (day === today) ['2PM', '5PM', '9PM'].some(function (s) { if (startMs(today, s) > now) { firstNext = s; return true; } return false; });
+    rows.forEach(function (row) {
+      var slug = row.getAttribute('data-hd-game'), g = BY[slug]; if (!g) return;
+      var m = (dayNums[slug] || {})[day] || {}, newest = null;
+      ['2PM', '5PM', '9PM'].forEach(function (slot) { if (m[slot]) newest = slot; });
+      ['2PM', '5PM', '9PM'].forEach(function (slot) {
+        var cell = row.querySelector('.hd-cell[data-slot="' + slot + '"]'); if (!cell) return;
+        var nums = m[slot], kind, line = '', strong = '';
+        if (nums) kind = 'done';
+        else if (day !== today) { kind = 'none'; line = 'No result'; }
+        else {
+          var at = startMs(today, slot), end = at + WINDOW_MIN[slot] * 60e3;
+          if (now < at) { kind = 'next'; if (slot === firstNext) { line = 'Draw in'; strong = fmtCountdown(at - now); } else line = 'Later today'; }
+          else if (now < end) { kind = 'live'; line = 'Drawing now'; }
+          else { kind = 'wait'; line = 'Waiting for PCSO'; }
+        }
+        var sig = day + '|' + kind + '|' + (nums ? nums.join('-') : line + strong);
+        if (cell.__sig !== sig) {
+          cell.__sig = sig;
+          cell.textContent = '';
+          var t = document.createElement('span'); t.className = 'hd-t'; t.textContent = slot; cell.appendChild(t);
+          if (nums) {
+            var k = slug + '|' + day + '|' + slot;
+            cell.appendChild(ballsEl(g, nums, !!dayRoll[k], 'sm')); delete dayRoll[k];
+            cell.querySelector('.balls').setAttribute('aria-label', g.name + ' ' + slot + ' winning numbers');
+          } else {
+            var st = document.createElement('span'); st.className = 'hd-st'; st.textContent = line;
+            if (strong) { var b = document.createElement('b'); b.textContent = strong; st.appendChild(b); }
+            cell.appendChild(st);
+          }
+        }
+        ['is-done', 'is-live', 'is-wait', 'is-next'].forEach(function (c) { cell.classList.toggle(c, c === 'is-' + kind); });
+        var isNew = !!nums && slot === newest;
+        cell.classList.toggle('is-new', isNew);
+        // "Check this draw" (check-sheet.js) reads the newest drawn cell of each game.
+        if (isNew) { cell.setAttribute('data-hero-game', slug); cell.setAttribute('data-date', day); }
+        else { cell.removeAttribute('data-hero-game'); cell.removeAttribute('data-date'); }
+      });
+    });
   }
   /* The home label is built at deploy time; say what the newest draw is relative to right now. */
   function renderHomeClock(now) {
@@ -222,6 +289,7 @@
     var now = Date.now();
     statusEls.forEach(function (el) { renderStatus(el, now); });
     renderTimeline(now);
+    renderHeroDay(now);
     renderHomeClock(now);
     renderDrawNotes(now);
     renderYesterday(now);
@@ -230,7 +298,7 @@
     timer = setTimeout(tick, fast ? 1000 - (now % 1000) + 5 : 20000);
   }
 
-  /* ---------- polling /live/latest.json ---------- */
+  /* ---------- polling /live/current.json ---------- */
   var pollTimer = null, failures = 0, inFlight = false, reqId = 0, pollingStarted = false;
   function nearDraw(now) {
     return GAMES.some(function (g) { var s = gameState(g, now); return s && (s.kind === 'live' || s.kind === 'wait' || (s.kind === 'next' && s.at - now < 15 * 60e3)); });
@@ -246,7 +314,7 @@
     inFlight = true;
     var id = ++reqId, ctrl = window.AbortController ? new AbortController() : null;
     var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 15000);
-    fetch('/anolabas/live/latest.json', { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+    fetch('/anolabas/live/current.json', { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) { if (id !== reqId) return; failures = 0; if (j && Array.isArray(j.draws)) ingest(j); })
       .catch(function () { failures++; })
@@ -440,12 +508,10 @@
     var box = document.querySelector('[data-hero]'); if (!box) return;
     var lb = document.querySelector('[data-hb-label]'), also = document.querySelector('[data-hb-also]');
     if (daily(g)) {
-      var el = box.querySelector('[data-hero-game="' + d.game + '"]'); if (!el) return;
-      if (slotKey(d.date, d.slot) < slotKey(el.getAttribute('data-date'), el.getAttribute('data-slot'))) return;
-      var old = el.querySelector('.balls'); if (old) old.parentNode.replaceChild(ballsEl(g, d.numbers.map(function (n) { return padN(g, n); }), true), old);
-      setText(el.querySelector('[data-f="slot"]'), SLOT_LABEL[d.slot]);
-      setText(el.querySelector('[data-f="win"]'), d.winners == null ? '' : winnersText(d.winners));
-      el.setAttribute('data-date', d.date); el.setAttribute('data-slot', d.slot);
+      var m = dayNums[d.game] || (dayNums[d.game] = {}), day = m[d.date] || (m[d.date] = {});
+      var nums = d.numbers.map(function (n) { return padN(g, n); });
+      if (!day[d.slot] || day[d.slot].join('-') !== nums.join('-')) { day[d.slot] = nums; if (!replaying) dayRoll[d.game + '|' + d.date + '|' + d.slot] = true; }
+      renderHeroDay(Date.now());
       if (lb && slotKey(d.date, d.slot) > slotKey(lb.getAttribute('data-date'), lb.getAttribute('data-slot'))) {
         lb.setAttribute('data-date', d.date); lb.setAttribute('data-slot', d.slot);
         if (also && also.getAttribute('data-date') < d.date) { also.hidden = true; also.textContent = ''; }
@@ -612,10 +678,15 @@
       txt.appendChild(tt); txt.appendChild(tb);
       var bw = document.createElement('span'); bw.className = 'lph-toast-balls';
       toastEl.appendChild(txt); toastEl.appendChild(bw);
-      toastEl.addEventListener('click', function () { hideToast(); jumpTo(toastTarget); });
+      toastEl.addEventListener('click', function () {
+        if (window.anoTrack && toastTarget) window.anoTrack('live_update_click', { game: toastTarget.path, draw_slot: toastTarget.slot });
+        hideToast(); jumpTo(toastTarget);
+      });
       document.body.appendChild(toastEl);
     }
-    toastTarget = { slug: g.slug, path: g.path };
+    toastTarget = { slug: g.slug, path: g.path, slot: String(d.slot || '').toLowerCase() };
+    // GA4 (growth/29 §4): Q4, does anyone wait for the draw and tap through?
+    if (window.anoTrack) window.anoTrack('live_update_shown', { game: g.path, draw_slot: toastTarget.slot });
     setText(toastEl.querySelector('.tt'), 'Just drawn · ' + g.short + (g.slots.length > 1 ? ' ' + SLOT_LABEL[d.slot] : '') + (count > 1 ? ' +' + (count - 1) : ''));
     setText(toastEl.querySelector('.tb'), 'Tap to see the result');
     var bw2 = toastEl.querySelector('.lph-toast-balls'); bw2.textContent = ''; bw2.appendChild(ballsEl(g, d.numbers, false, 'sm'));
@@ -775,7 +846,7 @@
 
   /* ---------- bind to the current document (initial load + every client-side navigation) ---------- */
   function bind() {
-    readCfg(); seedLatest();
+    readCfg(); seedLatest(); seedDayNums();
     statusEls = [].slice.call(document.querySelectorAll('[data-status]'));
     timeline = document.querySelector('[data-timeline]');
     syncNav(); bindTicker(); bindReveal();

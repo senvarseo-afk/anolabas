@@ -21,6 +21,9 @@
       .catch(function (e) { ready = null; throw e; });
     return ready;
   }
+  // GA4 (growth/29 §4): counts only, never the numbers typed.
+  function track(n, p) { if (window.anoTrack) window.anoTrack(n, p); }
+  function gpath(slug) { var g = byId[slug]; return (g && g.path) || slug; }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function fullUrl(t) { return '/anolabas/check/?game=' + t.game + '&date=' + t.date + '&slot=' + t.slot; }
   function numbersIn(root) { return [].map.call(root.querySelectorAll('.ball'), function (b) { return b.textContent.trim(); }); }
@@ -29,7 +32,7 @@
     return { game: row.getAttribute('data-game'), date: row.getAttribute('data-date'), slot: row.getAttribute('data-slot'), numbers: numbersIn(row.querySelector('[data-f="balls"]')) };
   }
   function fromHero() {
-    return [].filter.call(document.querySelectorAll('[data-hero-game], [data-hero-extra]'), function (e) { return !e.hidden; }).map(function (e) {
+    return [].filter.call(document.querySelectorAll('[data-hero-game], [data-hero-extra]'), function (e) { return !e.hidden && !e.hasAttribute('data-hero-skip'); }).map(function (e) {
       return { game: e.getAttribute('data-hero-game') || e.getAttribute('data-hero-extra'), date: e.getAttribute('data-date'), slot: e.getAttribute('data-slot'), numbers: numbersIn(e) };
     });
   }
@@ -97,6 +100,7 @@
         // A draw that arrived after the last build is not in the data file yet: check it against the numbers on screen.
         if (!d) d = { date: t.date, slot: t.slot, numbers: t.numbers.map(Number), jackpot: null, winners: null, official: false, archive: false };
         var v = core.verdict(d, vals, bet, 10);
+        track('check_result', { game: gpath(t.game), draw_slot: String(t.slot || '').toLowerCase(), method: 'sheet', tickets: 1, outcome: v.win ? 'match' : 'no_match' });
         out.innerHTML = '<div class="result-box ' + v.cls + '">' + L.numsLabel(g, vals) + '<span class="sub">' + v.body + '</span></div>';
       });
     }
@@ -112,6 +116,9 @@
     e.preventDefault(); e.stopPropagation();
     var panel = window.LPHShare.panel({ label: 'Check this draw', opener: a });
     panel.body.appendChild(el('p', 'small muted', 'Loading…'));
-    boot().then(function () { draw(panel.body, targets, targets[0]); }).catch(function () { location.href = fullUrl(targets[0]); });
+    boot().then(function () {
+      track('check_start', { game: gpath(targets[0].game), draw_slot: String(targets[0].slot || '').toLowerCase(), method: 'sheet' });
+      draw(panel.body, targets, targets[0]);
+    }).catch(function () { location.href = fullUrl(targets[0]); });
   }, true);
 })();

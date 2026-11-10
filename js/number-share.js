@@ -167,12 +167,13 @@
       say('Making the image...');
       make().then(function (img) {
         say('');
-        if (window.LPHShare) window.LPHShare.open({ blob: img.blob, dataUrl: img.dataUrl, text: D.title || document.title, url: D.url || location.href, filename: fname, opener: btn, title: 'Share this card' });
+        if (window.LPHShare) window.LPHShare.open({ blob: img.blob, dataUrl: img.dataUrl, text: D.title || document.title, url: D.url || location.href, filename: fname, opener: btn, title: 'Share this card', source: 'number' });
         else { download(img); say('Image downloaded.'); }
       }).catch(function () { say('Could not make the image in this browser.'); });
     }
 
     function copyLink() {
+      if (window.anoTrack) window.anoTrack('share_complete', { method: 'copy' });
       var url = D.url || location.href;
       function fallback() {
         var t = document.createElement('textarea');

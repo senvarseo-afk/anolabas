@@ -16,6 +16,7 @@
     out.textContent = '';
     if (isNaN(n) || n < min || n > max) { out.appendChild(el('p', 'small muted', 'Enter a number from ' + label(min) + ' to ' + label(max) + '.')); return; }
     out.appendChild(el('p', 'small muted', 'Looking up ' + label(n) + '…'));
+    if (window.anoTrack) window.anoTrack('number_lookup', { game: path });
     load().then(function (rs) {
       var total = rs.length, all = 0, last100 = 0, lastIdx = -1;
       for (var i = 0; i < rs.length; i++) {

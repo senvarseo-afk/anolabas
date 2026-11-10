@@ -9,6 +9,10 @@
       elStatus = $('ck-status'), elOut = $('ck-out'), elWin = $('ck-winning'), elForm = $('ck-form'), elAmtWrap = $('ck-amt-wrap'), elAmt = $('ck-amt'), elSys = $('ck-sys-note');
   var data = null, g = null, core = null, ticketSeq = 0, pendingDate = null, pendingSlot = null, pendingNums = null, pendingBet = null;
 
+  // GA4 (growth/29 §4): counts only, never the numbers typed.
+  function track(n, p) { if (window.anoTrack) window.anoTrack(n, p); }
+  var started = false;
+  function markStart() { if (started || !g) return; started = true; track('check_start', { game: g.path, method: 'tool' }); }
   function setStatus(t) { elStatus.textContent = t || ''; }
   function amountPlayed() { var a = parseInt(elAmt.value, 10); return a >= 10 && a % 10 === 0 ? a : null; }
   function nInputs() { return core.nInputs(); }
@@ -115,8 +119,9 @@
     var share = g.display + ' · ' + L.fmtDate(elDate.value, false) + (g.type === 'digit' && elSlot.value !== 'all' && g.slots.length > 1 ? ' ' + L.slotTime(elSlot.value) : '') + '\n' + lines.join('\n') + '\nChecked on Ano Labas — only PCSO validation is final. ' + location.origin + '/anolabas/check/';
     html += '<div class="btn-row"><button type="button" class="btn sec sm" id="ck-copy">Copy result</button>' + (anyWin ? '<a class="btn pri sm" href="/anolabas/guide/how-to-claim/">How to claim →</a>' : (g.tools ? '<a class="btn ghost sm" href="/anolabas/simulator/' + g.path + '/">Try the simulator</a>' : '<a class="btn ghost sm" href="/anolabas/guide/how-to-play-' + g.path + '/">Prize table</a>')) + '</div>';
     elOut.innerHTML = html;
-    $('ck-copy').addEventListener('click', function () { L.copyText(share).then(function () { setStatus('Result copied.'); }, function () { setStatus('Copy not available on this browser.'); }); });
+    $('ck-copy').addEventListener('click', function () { track('share_complete', { game: g.path, method: 'copy' }); L.copyText(share).then(function () { setStatus('Result copied.'); }, function () { setStatus('Copy not available on this browser.'); }); });
     elOut.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    track('check_result', { game: g.path, method: 'tool', tickets: tickets.length, outcome: anyWin ? 'match' : 'no_match' });
   }
 
   function loadFor(slug) {
@@ -157,9 +162,11 @@
   });
   elSlot.addEventListener('change', function () { renderWinning(); elOut.innerHTML = ''; });
   elAdd.addEventListener('click', function () { var r = ticketRow(); r.querySelector('input').focus(); });
+  elTickets.addEventListener('input', markStart);
   elForm.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!data) return;
+    markStart();
     var tickets = readTickets();
     if (!tickets) { setStatus('Fix the highlighted numbers: each must be ' + rangeHint() + (g.type === 'lotto' ? ' with no repeats.' : '.')); return; }
     if (!tickets.length) { setStatus('Enter the numbers on at least one ticket.'); return; }

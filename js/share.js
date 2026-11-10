@@ -174,6 +174,74 @@
     return c;
   }
 
+  /* ---------- home "today" card: every Swertres and EZ2 draw time of the day shown in the hero ---------- */
+  function readToday() {
+    var box = document.querySelector('[data-hday]'); if (!box) return null;
+    var day = box.getAttribute('data-day') || '';
+    var games = [].map.call(box.querySelectorAll('[data-hd-game]'), function (row) {
+      var g = BY[row.getAttribute('data-hd-game')] || { name: row.getAttribute('data-hd-game'), color: '#1d4ed8', ball: 'round' };
+      var cells = [].map.call(row.querySelectorAll('.hd-cell'), function (c) {
+        var pending = c.classList.contains('is-live') || c.classList.contains('is-wait');
+        return { slot: c.getAttribute('data-slot'), nums: balls(c), note: c.classList.contains('is-done') ? '' : pending ? 'Waiting' : /No result/.test(c.textContent) ? 'No result' : 'Not yet drawn' };
+      });
+      return { g: g, cells: cells };
+    });
+    var extras = [].filter.call(document.querySelectorAll('[data-hero-extra]'), function (e) { return e.getAttribute('data-date') === day; })
+      .map(function (e) { return { g: BY[e.getAttribute('data-hero-extra')] || { name: e.getAttribute('data-hero-extra'), color: '#1d4ed8' }, nums: balls(e) }; })
+      .filter(function (e) { return e.nums.length; });
+    var top = [].slice.call(document.querySelectorAll('[data-jpx-row]')).sort(function (a, b) { return (+b.getAttribute('data-jackpot') || 0) - (+a.getAttribute('data-jackpot') || 0); })[0];
+    var jackpot = top && +top.getAttribute('data-jackpot') ? { name: (BY[top.getAttribute('data-jpx-row')] || {}).name || '', amt: '₱' + Math.round(+top.getAttribute('data-jackpot')).toLocaleString('en-PH') } : null;
+    var today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+    return { day: day, isToday: day === today, games: games, extras: extras, jackpot: jackpot };
+  }
+  function renderToday(t) {
+    var W = S, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+    x.save(); x.scale(1, H / S); LPHCard.background(x); x.restore();
+    var y = LPHCard.header(x, { pill: 'PCSO LOTTO', pillMuted: true, kicker: t.isToday ? 'Resulta ngayon' : 'Latest results', title: t.isToday ? "Today's results" : 'PCSO results', sub: longDate(t.day) });
+    var colGap = 24, colW = (W - 144 - colGap * 2) / 3, cellH = 140;
+    t.games.forEach(function (gm) {
+      x.textBaseline = 'middle'; x.textAlign = 'left';
+      x.fillStyle = gm.g.color || GOLD; x.beginPath(); x.arc(84, y + 18, 10, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#fff'; x.font = '800 42px ' + COND; x.fillText(gm.g.name, 106, y + 20);
+      var top = y + 48;
+      gm.cells.forEach(function (cell, i) {
+        var cx = 72 + i * (colW + colGap);
+        x.fillStyle = cell.nums.length ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.04)'; rr(x, cx, top, colW, cellH, 18); x.fill();
+        x.fillStyle = GOLD; x.font = '800 28px ' + FONT; x.textAlign = 'left'; x.fillText(cell.slot, cx + 20, top + 30);
+        if (cell.nums.length) {
+          var n = cell.nums.length, gap = 10, size = Math.min(74, (colW - 40 - gap * (n - 1)) / n), st = cx + (colW - (n * size + (n - 1) * gap)) / 2;
+          cell.nums.forEach(function (v, k) { LPHCard.ball(x, st + k * (size + gap) + size / 2, top + 92, size / 2, gm.g.color, gm.g.ball === 'square', v); });
+        } else { x.fillStyle = '#9eabc6'; x.font = '600 28px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(cell.note, cx + colW / 2, top + 90); }
+      });
+      y = top + cellH + 40;
+    });
+    if (t.extras.length) {
+      x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = GOLD; x.font = '800 30px ' + FONT; x.fillText('ALSO DRAWN · 9PM', 72, y + 8); y += 50;
+      t.extras.slice(0, 5).forEach(function (e) {
+        var n = e.nums.length, gap = 8, size = 50, w = n * size + (n - 1) * gap, st = W - 72 - w;
+        x.fillStyle = '#fff'; fit(x, e.g.name, '700', 34, st - 72 - 20, COND); x.textAlign = 'left'; x.fillText(e.g.name, 72, y + size / 2);
+        e.nums.forEach(function (v, k) { LPHCard.ball(x, st + k * (size + gap) + size / 2, y + size / 2, size / 2, e.g.color, e.g.ball === 'square', v); });
+        y += size + 16;
+      });
+    }
+    if (t.jackpot && y + 70 < H - 120) {
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#c9d4ea'; fit(x, 'Biggest jackpot now · ' + t.jackpot.name + ' ' + t.jackpot.amt, '700', 32, W - 144);
+      x.fillText('Biggest jackpot now · ' + t.jackpot.name + ' ', W / 2 - x.measureText(t.jackpot.amt).width / 2, y + 30);
+      x.fillStyle = GOLD; x.textAlign = 'left'; var full = x.measureText('Biggest jackpot now · ' + t.jackpot.name + ' ' + t.jackpot.amt).width;
+      x.fillText(t.jackpot.amt, W / 2 + full / 2 - x.measureText(t.jackpot.amt).width, y + 30);
+    }
+    x.save(); x.translate(0, H - S); LPHCard.footer(x); x.restore();
+    return c;
+  }
+  function todayText(t) {
+    var parts = t.games.map(function (gm) {
+      var done = gm.cells.filter(function (c) { return c.nums.length; }).map(function (c) { return c.slot + ' ' + c.nums.join('-'); });
+      return done.length ? (gm.g.short || gm.g.name) + ' ' + done.join(', ') : '';
+    }).filter(Boolean);
+    t.extras.forEach(function (e) { parts.push((e.g.short || e.g.name) + ' ' + e.nums.join('-')); });
+    return 'PCSO results ' + longDate(t.day) + ': ' + parts.join(' | ');
+  }
+
   /* ---------- bottom drawer ---------- */
   var ICON = {
     share: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v7h14v-7"/>',
@@ -199,8 +267,12 @@
     setTimeout(function () { o.root.remove(); if (o.url) URL.revokeObjectURL(o.url); }, 220);
     if (o.opener && o.opener.focus) o.opener.focus({ preventScroll: true });
   }
+  // GA4 (growth/29 §4): opts.game (game path) and opts.source (result | number) describe what is shared.
+  function track(n, p) { if (window.anoTrack) window.anoTrack(n, p); }
+  var ACTION = { share: 'share', save: 'save', fb: 'facebook', ms: 'messenger', vb: 'viber', link: 'copy' };
   function shareSheet(opts) {
     close();
+    track('share_open', { game: opts.game, method: opts.source });
     var root = document.createElement('div'); root.className = 'sheet-root';
     var dim = document.createElement('div'); dim.className = 'sheet-dim'; dim.addEventListener('click', close);
     var sheet = document.createElement('div'); sheet.className = 'sheet'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', opts.title || 'Share');
@@ -227,6 +299,7 @@
       var c = document.createElement('span'); c.className = 'sheet-ic-c ' + cls; c.appendChild(icon(name, cls === 'ic-link' ? '#0f2a5f' : '#fff'));
       var t = document.createElement('span'); t.textContent = label;
       a.appendChild(c); a.appendChild(t);
+      a.addEventListener('click', function () { track('share_complete', { game: opts.game, method: ACTION[name] || name }); });
       if (onClick) a.addEventListener('click', onClick);
       row.appendChild(a); return a;
     }
@@ -304,11 +377,19 @@
     e.preventDefault();
     var info = readCard(card);
     var text = info.g.name + ' · ' + info.date + ': ' + info.rows.map(function (r) { return (info.rows.length > 1 ? r.label + ' ' : '') + r.nums.join('-'); }).join(' | ');
-    var draw = function () { shareSheet({ canvas: renderResult(info), text: text, url: info.url, filename: 'anolabas-' + (info.g.path || 'result') + '.png', opener: b, title: 'Share this result' }); };
+    var draw = function () { shareSheet({ canvas: renderResult(info), text: text, url: info.url, filename: 'anolabas-' + (info.g.path || 'result') + '.png', opener: b, title: 'Share this result', game: info.g.path, source: 'result' }); };
     var waits = [];
     if (document.fonts && document.fonts.load) waits.push(document.fonts.load('900 60px "Inter Variable"'), document.fonts.load('800 60px "Barlow Condensed"'), document.fonts.load('700 40px "IBM Plex Mono"'));
     if (info.g.logo) waits.push(new Promise(function (res) { var im = new Image(); im.onload = function () { info.logo = im; res(); }; im.onerror = function () { res(); }; setTimeout(res, 900); im.src = info.g.logo; }));
     Promise.all(waits).then(draw, draw);
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-share-today]'); if (!b) return;
+    var t = readToday(); if (!t) return;
+    e.preventDefault();
+    var draw = function () { shareSheet({ canvas: renderToday(t), text: todayText(t), url: SITE + '/', filename: 'anolabas-results-' + t.day + '.png', opener: b, title: "Share today's results", game: 'all', source: 'today' }); };
+    if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('900 60px "Inter Variable"'), document.fonts.load('800 60px "Barlow Condensed"')]).then(draw, draw);
+    else draw();
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { close(); return; }

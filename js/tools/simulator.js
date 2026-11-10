@@ -78,10 +78,9 @@
     if (g.slug === '2d-lotto') seeds = e.n.slice();
     return fillUnique(seeds.map(fitRange));
   }
+  // Daily set: one random set per game per Manila day, the same for every visitor (no personal input).
   function genToday() {
-    var bday = $('sim-bday').value;
-    if (!bday) { return needInput('Enter your birthday to get your one set for today.', 'sim-bday-m'); }
-    var rng = L.mulberry32(L.hashStr(bday + '|' + L.todayManila() + '|' + g.slug));
+    var rng = L.mulberry32(L.hashStr('daily|' + L.todayManila() + '|' + g.slug));
     return genRandom(rng);
   }
   function generateOne() {
@@ -149,6 +148,18 @@
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
   function each(list, fn) { Array.prototype.forEach.call(list, fn); }
   function doneText(n) { return 'Done: ' + n + ' simulated set' + (n > 1 ? 's' : '') + ' ready.'; }
+  /* With 2+ sets: one row to copy, download or share every set at once (one image card with a row per set). */
+  function allHTML(n) {
+    return '<div class="sim-all" data-all>' +
+      '<div class="card-head"><span class="sim-label">All ' + n + ' sets</span><span class="small muted">One image with every set</span></div>' +
+      '<div class="btn-row">' +
+      '<button type="button" class="btn pri sm" data-act="download-all">Download all ' + n + '</button>' +
+      '<button type="button" class="btn ghost sm" data-act="share-all">Share all ' + n + '</button>' +
+      '<button type="button" class="btn sec sm" data-act="copy-all">Copy all</button>' +
+      '</div>' +
+      '<div class="status" data-out></div><div class="card-preview" data-preview hidden></div>' +
+      '</div>';
+  }
   function keepInView(stage, box) { // make sure the first result row will be on screen (bottom nav covers the last ~60px on phones)
     try {
       var row = box.querySelector('.balls') || box, rb = row.getBoundingClientRect().bottom, st = stage.getBoundingClientRect().top;
@@ -160,7 +171,8 @@
   function revealSets(sets) {
     var out = $('sim-out'), go = $('sim-go'), stage = $('sim-stage'), label = $('sim-stage-label');
     timers.forEach(clearTimeout); timers = [];
-    out.innerHTML = sets.map(function (s, i) { return setHTML(i, s); }).join('');
+    out.innerHTML = (sets.length > 1 ? allHTML(sets.length) : '') + sets.map(function (s, i) { return setHTML(i, s); }).join('');
+    var allRow = out.querySelector('[data-all]');
     if (!stage || prefersReduced()) { // checked at click time: no drum, results at once
       if (stage) stage.classList.remove('is-spin');
       setDrawing(false); out.removeAttribute('aria-busy');
@@ -174,6 +186,7 @@
     first.classList.add('tb-wait');
     each(tail, function (el) { el.classList.add('tb-hide'); });
     for (var i = 1; i < boxes.length; i++) boxes[i].classList.add('tb-hide');
+    if (allRow) allRow.classList.add('tb-hide');
     if (label) label.textContent = 'SIMULATION · Random draw';
     stage.classList.remove('is-spin'); void stage.offsetWidth; stage.classList.add('is-spin');
     setStatus('Drawing ' + sets.length + ' simulated set' + (sets.length > 1 ? 's' : '') + '…');
@@ -192,6 +205,7 @@
     var end = Math.max(landed - 120 + FADE, boxes.length > 1 ? landed + (boxes.length - 2) * SET_GAP + FADE : 0);
     later(function () {
       first.classList.remove('tb-drop');
+      if (allRow) allRow.classList.remove('tb-hide');
       each(firstBalls, function (b) { b.style.animationDelay = ''; });
       each(out.querySelectorAll('.tb-show'), function (el) { el.classList.remove('tb-show'); });
       if (label) label.textContent = 'SIMULATION · Done';
@@ -203,10 +217,31 @@
   function cardFor(nums) {
     return L.drawCard({ title: g.display, subtitle: L.fmtDate(L.todayManila()) + ' · ' + MODE_LABEL[mode], numbers: (isLotto ? L.sortNums(nums) : nums).map(function (n) { return L.pad(g, n); }), square: g.ball === 'square', mode: 'Simulated set · not a draw result', site: (cfg.site || '').replace(/^https?:\/\//, '') });
   }
+  function allSetsAction(btn, act) {
+    var row = btn.closest('[data-all]'), out = row.querySelector('[data-out]'), sets = lastSets.slice();
+    if (!sets.length) return;
+    var shown = sets.map(function (s) { return isLotto ? L.sortNums(s) : s; });
+    var labels = shown.map(function (s) { return L.numsLabel(g, s); });
+    var url = cfg.site + '/simulator/' + g.path + '/';
+    var text = g.display + ' simulated sets: ' + labels.join(' | ') + ' — for fun only, not a prediction. ' + url;
+    if (window.anoTrack) window.anoTrack('share_complete', { game: g.path, method: { 'copy-all': 'copy', 'download-all': 'save', 'share-all': 'share' }[act], sets: sets.length });
+    if (act === 'copy-all') { L.copyText(text).then(function () { out.textContent = 'Copied all ' + sets.length + ' sets.'; }, function () { out.textContent = 'Copy not available on this browser.'; }); return; }
+    var c = L.drawCard({ title: g.display, subtitle: L.fmtDate(L.todayManila()) + ' · ' + MODE_LABEL[mode] + ' · ' + sets.length + ' sets', numbers: shown[0].map(function (n) { return L.pad(g, n); }), sets: shown.map(function (s) { return s.map(function (n) { return L.pad(g, n); }); }), square: g.ball === 'square', mode: 'Simulated sets · not a draw result', site: (cfg.site || '').replace(/^https?:\/\//, '') });
+    var fname = 'anolabas-' + g.path + '-simulation-' + sets.length + '-sets.png';
+    var prev = row.querySelector('[data-preview]');
+    prev.innerHTML = '<img alt="Simulation card with ' + sets.length + ' sets" src="' + c.toDataURL('image/png') + '"><p class="small muted">If the download did not start, long-press the image to save it.</p>'; prev.hidden = false;
+    if (act === 'download-all') L.downloadCanvas(c, fname).then(function () { out.textContent = 'Card ready (1080×1350) with all ' + sets.length + ' sets.'; }, function () { out.textContent = 'Long-press the image to save.'; });
+    else L.shareCanvas(c, g.display + ' simulation', text, url, fname).then(function () { out.textContent = 'Shared.'; }, function () { out.textContent = 'Share cancelled or not available; use Download all instead.'; });
+  }
   $('sim-out').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-act]'); if (!btn) return;
+    var actAll = btn.getAttribute('data-act');
+    if (/-all$/.test(actAll)) { allSetsAction(btn, actAll); return; }
     var box = btn.closest('.sim-set'), idx = +box.getAttribute('data-idx'), nums = lastSets[idx], out = box.querySelector('[data-out]'), act = btn.getAttribute('data-act');
     var label = L.numsLabel(g, nums), text = g.display + ' simulated set: ' + label + ' — for fun only, not a prediction. ' + cfg.site + '/simulator/' + g.path + '/';
+    // GA4 (growth/29 §4): copy, download and share count as share_complete.
+    var shareAct = { copy: 'copy', download: 'save', share: 'share' }[act];
+    if (shareAct && window.anoTrack) window.anoTrack('share_complete', { game: g.path, method: shareAct });
     if (act === 'copy') { L.copyText(text).then(function () { out.textContent = 'Copied: ' + label; }, function () { out.textContent = 'Copy not available on this browser.'; }); }
     if (act === 'appeared') {
       if (!data) { out.textContent = 'Draw history still loading…'; return; }
@@ -234,8 +269,7 @@
     mode = m;
     document.querySelectorAll('#sim-mode button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-mode') === m ? 'true' : 'false'); });
     $('sim-window-wrap').hidden = !(m === 'hot' || m === 'cold' || m === 'longest-gap');
-    $('sim-personal').hidden = !(m === 'personal' || m === 'today');
-    $('sim-plate-wrap').hidden = m !== 'personal';
+    $('sim-personal').hidden = m !== 'personal';
     $('sim-dream').hidden = m !== 'dream';
     $('sim-count-wrap').hidden = m === 'today';
     $('sim-mode-note').textContent = {
@@ -245,7 +279,7 @@
       'longest-gap': 'Numbers with the longest gap since their last appearance get more weight. Descriptive only — a long gap does not change the odds.',
       personal: 'Birthday, plate or anniversary digits become numbers; the rest are filled randomly. Note: dates only cover 1–31, and birthday tickets are very common, so a jackpot on such a set is more likely to be shared.',
       dream: 'Folklore table of common Filipino dream symbols and the numbers tradition attaches to them. Entertainment only; it has no effect on the draw.',
-      today: 'One fixed set per day, made from your birthday + today\'s date. Same input gives the same set until midnight (Manila). It does not raise your chance of winning.'
+      today: 'One random set per day, the same for everyone who opens this page today. It changes at midnight (Manila). It does not raise your chance of winning.'
     }[m];
     updateWindowNote();
   }
@@ -259,10 +293,11 @@
   $('sim-dream-kw').addEventListener('input', function () { var e = dreamMatch($('sim-dream-kw').value); $('sim-dream-note').textContent = e ? 'Folklore: ' + e.t + ' → ' + e.n.join(', ') : ''; });
   $('sim-go').addEventListener('click', function () {
     if (busy) return;
-    var count = mode === 'today' ? 1 : Math.min(5, Math.max(1, +$('sim-count').value || 1)), sets = [];
+    var count = mode === 'today' ? 1 : Math.min(20, Math.max(1, +$('sim-count').value || 1)), sets = [];
     setStatus('');
     for (var i = 0; i < count; i++) { var s = generateOne(); if (!s) return; sets.push(s); }
     lastSets = sets; revealSets(sets);
+    if (window.anoTrack) window.anoTrack('simulator_run', { game: g.path, method: mode });
     try { localStorage.setItem('lph_sim_bday', $('sim-bday').value || ''); } catch (e) {}
   });
   try { var sb = localStorage.getItem('lph_sim_bday'); if (sb) $('sim-bday').value = sb; } catch (e) {}
