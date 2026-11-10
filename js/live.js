@@ -291,6 +291,7 @@
     renderTimeline(now);
     renderHeroDay(now);
     renderHomeClock(now);
+    renderJackpotWhen(now);
     renderDrawNotes(now);
     renderYesterday(now);
     if (!statusEls.length && !timeline) return;
@@ -552,9 +553,31 @@
     var rows = [].slice.call(document.querySelectorAll('[data-jpx-row]')).sort(function (a, b) { return (+b.getAttribute('data-jackpot') || 0) - (+a.getAttribute('data-jackpot') || 0); });
     var top = rows[0], tg = top && BY[top.getAttribute('data-jpx-row')]; if (!tg) return;
     var tw = top.getAttribute('data-winners'), td = top.getAttribute('data-date'), tn = nextSlot(tg, now);
-    setText(document.querySelector('.jpx-k'), 'Biggest jackpot now · ' + tg.name);
+    var when = document.querySelector('[data-jpx-when]'); if (when) when.setAttribute('data-top', tg.slug);
+    setText(document.querySelector('[data-jpx-game]'), tg.name);
     setText(document.querySelector('.jpx-amt'), fmtPeso(+top.getAttribute('data-jackpot')));
-    setText(document.querySelector('.jpx-s'), (tw && +tw > 0 ? winnersText(+tw, 'jackpot winner') + ' on ' + mdShort(td) : 'No jackpot winner on ' + mdShort(td)) + (tn ? ' · Next draw ' + fmtDateRow(tn.date) + ', ' + SLOT_LABEL[tn.slot] : ''));
+    setText(document.querySelector('.jpx-s'), tw && +tw > 0 ? winnersText(+tw, 'jackpot winner') + ' on ' + mdShort(td) : 'No jackpot winner on ' + mdShort(td));
+    var chip = document.querySelector('[data-chip="' + d.game + '"] [data-f="chip-amt"]'); if (chip) setText(chip, compactPeso(d.jackpot));
+    renderJackpotWhen(now);
+  }
+  function compactPeso(n) { return n == null ? '' : n >= 1e6 ? '₱' + (n / 1e6).toFixed(1) + 'M' : fmtPeso(n); }
+  /* home jackpot block: when the biggest jackpot is drawn, and which other jackpots are drawn tonight */
+  function renderJackpotWhen(now) {
+    var k = document.querySelector('[data-jpx-when]'); if (!k) return;
+    var tg = BY[k.getAttribute('data-top')]; if (!tg) return;
+    var today = iso(mnl(now)), st = gameState(tg, now), txt = '';
+    if (st && st.kind === 'live') txt = 'Jackpot · being drawn now';
+    else if (st && st.kind === 'wait') txt = 'Jackpot · drawn tonight, result soon';
+    else if (st && st.date === today) txt = 'Jackpot · draws tonight ' + SLOT_LABEL[st.slot];
+    else if (st) txt = 'Biggest jackpot · next draw ' + fmtDateRow(st.date) + ', ' + SLOT_LABEL[st.slot];
+    if (txt) setText(k, txt);
+    var box = document.querySelector('[data-jpx-tonight]'); if (!box) return;
+    var any = false;
+    [].forEach.call(box.querySelectorAll('[data-chip]'), function (c) {
+      var g = BY[c.getAttribute('data-chip')], s = g && g.slug !== tg.slug ? gameState(g, now) : null;
+      var on = !!s && s.date === today; c.hidden = !on; if (on) any = true;
+    });
+    box.hidden = !any;
   }
   /* game page: every place that repeats the latest draw moves together, so a new date never sits beside old numbers */
   function updateHubText(g, d, oldDate) {
